@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CoReason Swarm Topology (Offline Fallback)",
+  "type": "object",
+  "properties": { "nodes": { "type": "object" }, "edges": { "type": "array" } },
+  "additionalProperties": true
+}

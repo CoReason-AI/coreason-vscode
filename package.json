@@ -5,12 +5,30 @@
     "vscode": "^1.90.0"
   },
   "main": "./dist/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:yaml",
+    "onLanguage:json"
+  ],
+  "extensionDependencies": [
+    "redhat.vscode-yaml"
+  ],
   "contributes": {
     "commands": [
       {
         "command": "coreason.openManifold",
         "title": "CoReason: Open Projection Manifold"
+      }
+    ],
+    "yamlValidation": [
+      {
+        "fileMatch": "*.coreason.yaml",
+        "url": "coreason-schema://schemas/swarm.json"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "*.coreason.json",
+        "url": "coreason-schema://schemas/swarm.json"
       }
     ]
   },
@@ -20,6 +38,7 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.110.0",
