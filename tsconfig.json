@@ -6,6 +6,7 @@
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "skipLibCheck": true,
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
     "types": ["node"],

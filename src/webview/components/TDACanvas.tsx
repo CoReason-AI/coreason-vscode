@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ReactFlow, Controls, Background, Node, Edge } from '@xyflow/react';
+// @ts-ignore
 import '@xyflow/react/dist/style.css';
 
 export const TDACanvas = () => {
