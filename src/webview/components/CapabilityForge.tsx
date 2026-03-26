@@ -38,10 +38,7 @@ export const CapabilityForge = () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    capability: selectedTool,
-                    intent: parsedIntent
-                })
+                body: intentJson
             });
 
             const data = await response.json();
@@ -79,7 +76,7 @@ export const CapabilityForge = () => {
                         onChange={(e) => setSelectedTool(e.target.value)}
                         style={{
                             padding: '8px',
-                            backgroundColor: 'var(--vscode-dropdown-background)',
+                            background: 'var(--vscode-dropdown-background)',
                             color: 'var(--vscode-dropdown-foreground)',
                             border: '1px solid var(--vscode-dropdown-border)',
                             borderRadius: '2px',
@@ -100,7 +97,7 @@ export const CapabilityForge = () => {
                         style={{
                             flexGrow: 1,
                             padding: '10px',
-                            backgroundColor: 'var(--vscode-input-background)',
+                            background: 'var(--vscode-input-background)',
                             color: 'var(--vscode-input-foreground)',
                             border: '1px solid var(--vscode-input-border)',
                             fontFamily: 'var(--vscode-editor-font-family), monospace',
@@ -115,7 +112,7 @@ export const CapabilityForge = () => {
                     disabled={isLoading}
                     style={{
                         padding: '10px',
-                        backgroundColor: 'var(--vscode-button-background)',
+                        background: 'var(--vscode-button-background)',
                         color: 'var(--vscode-button-foreground)',
                         border: 'none',
                         borderRadius: '2px',

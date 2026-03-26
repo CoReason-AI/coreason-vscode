@@ -3,7 +3,6 @@ export type WebviewMessage =
   | { type: 'READY' }
   | { type: 'SCHEMA_UPDATE'; payload: unknown }
   | { type: 'SET_ROUTE'; payload: 'MANIFOLD' | 'FORGE' }
-  | { type: 'EXECUTE_TOOL'; payload: { capability: string; intent: any } }
   | { type: 'EDGE_CREATED'; payload: { source: string; target: string } };
 
 export type ExtensionMessage =
