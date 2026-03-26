@@ -10,9 +10,6 @@
     "onLanguage:yaml",
     "onLanguage:json"
   ],
-  "extensionDependencies": [
-    "redhat.vscode-yaml"
-  ],
   "contributes": {
     "commands": [
       {
