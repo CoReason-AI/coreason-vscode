@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TDACanvas } from './components/TDACanvas';
 import { CapabilityForge } from './components/CapabilityForge';
+import { OracleResolver } from './components/OracleResolver';
 
 const App = () => {
-    const [route, setRoute] = useState<'MANIFOLD' | 'FORGE'>('MANIFOLD');
+    const [route, setRoute] = useState<'MANIFOLD' | 'FORGE' | 'ORACLE'>('MANIFOLD');
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -20,6 +21,10 @@ const App = () => {
 
     if (route === 'FORGE') {
         return <CapabilityForge />;
+    }
+
+    if (route === 'ORACLE') {
+        return <OracleResolver />;
     }
 
     return <TDACanvas />;

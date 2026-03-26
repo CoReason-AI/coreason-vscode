@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { CoreasonSchemaProvider } from './providers/schemaProvider';
 import { ManifoldPanel } from './panels/ManifoldPanel';
 import { ForgePanel } from './panels/ForgePanel';
+import { OraclePanel } from './panels/OraclePanel';
+import { OracleTreeProvider } from './providers/OracleTreeProvider';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('CoReason Projection Manifold activated.');
@@ -30,6 +32,15 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(forgeDisposable);
+
+    const oracleTreeProvider = new OracleTreeProvider();
+    vscode.window.registerTreeDataProvider('coreason-oracle-inbox', oracleTreeProvider);
+
+    const oracleDisposable = vscode.commands.registerCommand('coreason.resolveOracle', (workflowId?: string) => {
+        OraclePanel.createOrShow(context.extensionUri, workflowId);
+    });
+
+    context.subscriptions.push(oracleDisposable);
 
     let timeout: NodeJS.Timeout | undefined;
 

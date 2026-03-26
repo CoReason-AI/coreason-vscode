@@ -21,8 +21,29 @@
       {
         "command": "coreason.openForge",
         "title": "CoReason: Open Capability Forge"
+      },
+      {
+        "command": "coreason.resolveOracle",
+        "title": "CoReason: Resolve Oracle"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "coreason-explorer",
+          "title": "CoReason",
+          "icon": "$(circuit-board)"
+        }
+      ]
+    },
+    "views": {
+      "coreason-explorer": [
+        {
+          "id": "coreason-oracle-inbox",
+          "name": "Epistemic Oracle Inbox"
+        }
+      ]
+    },
     "yamlValidation": [
       {
         "fileMatch": "*.coreason.yaml",

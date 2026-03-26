@@ -2,7 +2,8 @@
 export type WebviewMessage =
   | { type: 'READY' }
   | { type: 'SCHEMA_UPDATE'; payload: unknown }
-  | { type: 'SET_ROUTE'; payload: 'MANIFOLD' | 'FORGE' }
+  | { type: 'SET_ROUTE'; payload: 'MANIFOLD' | 'FORGE' | 'ORACLE' }
+  | { type: 'SET_ORACLE_WORKFLOW'; payload: string }
   | { type: 'EDGE_CREATED'; payload: { source: string; target: string } };
 
 export type ExtensionMessage =
