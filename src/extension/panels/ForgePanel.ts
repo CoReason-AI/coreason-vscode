@@ -47,6 +47,10 @@ export class ForgePanel {
         }, null, this.disposables);
     }
 
+    private escapeForPythonJsonLoads(str: string): string {
+        return JSON.stringify(str).slice(1, -1).replace(/'/g, "\\'");
+    }
+
     private async crystallizeTest(payload: { capability: string; state: string; intent: string; output: string }) {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -59,18 +63,22 @@ export class ForgePanel {
         const fileName = `test_capability_${payload.capability}_${timestamp}.py`;
         const testUri = vscode.Uri.joinPath(rootUri, 'tests', 'sandbox', fileName);
 
+        const safeState = this.escapeForPythonJsonLoads(payload.state);
+        const safeIntent = this.escapeForPythonJsonLoads(payload.intent);
+        const safeOutput = this.escapeForPythonJsonLoads(payload.output);
+
         const fileContent = `import pytest
 import json
 
 def test_${payload.capability}_crystallized():
     # Latent State Context
-    latent_state = json.loads('''${payload.state}''')
+    latent_state = json.loads('${safeState}')
 
     # Execution Intent
-    intent = json.loads('''${payload.intent}''')
+    intent = json.loads('${safeIntent}')
 
     # Expected Output
-    expected_output = json.loads('''${payload.output}''')
+    expected_output = json.loads('${safeOutput}')
 
     # TODO: Implement actual sandbox execution assertion here
     # result = execute_capability("${payload.capability}", latent_state, intent)
