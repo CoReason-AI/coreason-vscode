@@ -1,26 +1,31 @@
-name: Security Scan
+
+name: Security Audit
 
 on:
-  push:
-    branches: [main, develop]
   schedule:
-    - cron: "0 0 * * 0" # Run weekly
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  analyze:
-    name: CodeQL Analysis
+  audit-dependencies:
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          languages: javascript-typescript
+          enable-cache: true
+          python-version: '3.14'
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+      - name: Export requirements for pip-audit
+        run: uv export --format requirements-txt > requirements.txt
+        shell: bash
+
+      - name: Run pip-audit
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: requirements.txt

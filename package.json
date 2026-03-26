@@ -1,6 +1,7 @@
 {
   "name": "coreason-vscode",
   "publisher": "coreason",
+  "version": "0.0.1",
   "engines": {
     "vscode": "^1.90.0"
   },
