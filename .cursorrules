@@ -1,1 +1,13 @@
-See AGENTS.md for AI agent rules.
+# Immutable Sandbox Laws
+
+## 1. The Zero-Waste Mandate
+Explicitly forbidden to run `npm install` for state management, routing, or heavy UI utility libraries. You must mandate the use of native React hooks and the existing lightweight IPC router.
+
+## 2. The WebWorker Physics
+All WebWorkers must be instantiated using Vite's blob-inlining strategy (`import Worker from './worker?worker&inline'`) to bypass `vscode-webview://` protocol restrictions.
+
+## 3. Visual Strictness
+Forbidden to use raw hex codes or standard CSS frameworks. Enforce the exclusive use of native VS Code CSS variables (e.g., `var(--vscode-editor-background)`) to guarantee host-theme compliance.
+
+## 4. IPC Boundary Enforcement
+The `src/webview` (React/Chromium) cannot access the file system/`vscode` API natively. The `src/extension` (Node.js Host) cannot access the DOM.

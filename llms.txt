@@ -1,12 +1,28 @@
-# coreason-ide - AI System Directives
+# CoReason VS Code Projection Manifold
 
-**SYSTEM DIRECTIVE: STRICT ARCHITECTURAL BOUNDARIES ENFORCED**
+> "This repository is a cybernetic control surface and topological canvas for the coreason-runtime Active Inference mesh."
 
-This repository is governed by rigorous AI-Native development protocols.
-Before analyzing, modifying, or proposing changes to this codebase, you MUST read and adhere to the rules defined in `AGENTS.md`.
+## IPC Network Contract
+The exact `WebviewMessage` payloads:
+- [`READY`](./src/shared/types.ts): Triggers the React mount handshake.
+- [`SCHEMA_UPDATE`](./src/shared/types.ts): Update the schema structure stored in the Host.
+- [`SET_ROUTE`](./src/shared/types.ts): Request to change the current application route.
+- [`SET_ORACLE_WORKFLOW`](./src/shared/types.ts): Request to set the Oracle workflow context.
+- [`EDGE_CREATED`](./src/shared/types.ts): Notify React that a new edge has been created.
+- [`REQUEST_SYNTHESIS`](./src/shared/types.ts): Request data synthesis from the Python edge.
 
-* **License:** Prosperity Public License 3.0
-* **Core Tooling:** `uv` (Package Manager), `ruff` (Lint/Format), `mypy` (Strict Typing).
-* **Logging:** Strict enforcement of `loguru`. Standard `print()` or `logging` module usage is mathematically quarantined.
+The exact `ExtensionMessage` payloads:
+- [`REQUEST_SCHEMA`](./src/shared/types.ts): Request the current schema state from React.
+- [`OPEN_FILE`](./src/shared/types.ts): Notify React to display a newly opened file.
+- [`YAML_UPDATE`](./src/shared/types.ts): Broadcast an update to the underlying YAML data.
 
-Failure to adhere to the structural bounding defined in `AGENTS.md` will result in CI/CD pipeline rejection.
+## The Telemetry Mesh
+Real-time LLM thoughts are streamed via Server-Sent Events (SSE) from `http://localhost:8000/api/v1/telemetry/stream`.
+Expected event types:
+- `NodeStartedEvent`
+- `TokenStreamChunk`
+- `NodeCompletedEvent`
+- `NodeErrorEvent`
+
+## The AST Mutation Protocol
+Bi-directional YAML Lens mutations (e.g., adding an edge) must be performed via `vscode.WorkspaceEdit().insert()` or `replace()`, appending new connections rather than string-replacing the entire AST. Visual edges map to `actionSpaceId` arrays in the AST.

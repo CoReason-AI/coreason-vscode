@@ -1,0 +1,98 @@
+{
+  "name": "coreason-vscode",
+  "publisher": "coreason",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:yaml",
+    "onLanguage:json"
+  ],
+  "extensionDependencies": [
+    "redhat.vscode-yaml"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "coreason.openManifold",
+        "title": "CoReason: Open Projection Manifold"
+      },
+      {
+        "command": "coreason.openForge",
+        "title": "CoReason: Open Capability Forge"
+      },
+      {
+        "command": "coreason.resolveOracle",
+        "title": "CoReason: Resolve Oracle"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "coreason-explorer",
+          "title": "CoReason",
+          "icon": "$(circuit-board)"
+        }
+      ]
+    },
+    "views": {
+      "coreason-explorer": [
+        {
+          "id": "coreason-oracle-inbox",
+          "name": "Epistemic Oracle Inbox"
+        }
+      ]
+    },
+    "yamlValidation": [
+      {
+        "fileMatch": "*.coreason.yaml",
+        "url": "coreason-schema://schemas/swarm.json"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "*.coreason.json",
+        "url": "coreason-schema://schemas/swarm.json"
+      }
+    ]
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.10.1",
+    "elkjs": "^0.11.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "web-worker": "^1.5.0",
+    "yaml": "^2.8.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/vscode": "^1.110.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.2",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.27.4",
+    "glob": "^13.0.6",
+    "jsdom": "^29.0.1",
+    "mocha": "^11.7.5",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.2",
+    "vitest": "^4.1.1"
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "npm run build:extension && npm run build:webview",
+    "build:extension": "esbuild src/extension/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
+    "build:webview": "vite build",
+    "watch": "npm run build:extension -- --watch",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test:e2e": "npm run build:extension && tsc -p tsconfig.test.json && node ./dist/test/runTest.js"
+  }
+}

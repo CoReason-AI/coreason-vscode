@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "moduleResolution": "node",
+    "types": ["node"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "ignoreDeprecations": "6.0"
+  },
+  "include": ["src/test/**/*"],
+  "exclude": [
+    "src/webview/**/*",
+    "src/test/*.test.ts",
+    "src/test/*.tsx",
+    "src/test/setup.ts",
+    "src/test/vscode-mock.ts"
+  ]
+}
