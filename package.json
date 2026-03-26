@@ -66,20 +66,26 @@
     "yaml": "^2.8.3"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.110.0",
     "@vitejs/plugin-react": "^6.0.1",
     "esbuild": "^0.27.4",
+    "jsdom": "^29.0.1",
     "typescript": "^6.0.2",
-    "vite": "^8.0.2"
+    "vite": "^8.0.2",
+    "vitest": "^4.1.1"
   },
   "scripts": {
     "vscode:prepublish": "npm run build",
     "build": "npm run build:extension && npm run build:webview",
     "build:extension": "esbuild src/extension/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node",
     "build:webview": "vite build",
-    "watch": "npm run build:extension -- --watch"
+    "watch": "npm run build:extension -- --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
   }
 }
