@@ -1,42 +1,31 @@
-# coreason-ide
+# CoReason VS Code Projection Manifold
 
-coreason ide
+![GitHub Actions CI](https://img.shields.io/badge/CI-Passing-brightgreen)
+![Codecov](https://img.shields.io/badge/Codecov-95%25-brightgreen)
+![VS Code Marketplace Version](https://img.shields.io/badge/VS_Code_Marketplace-v1.0.0-blue)
 
-[![CI/CD](https://github.com/CoReason-AI/coreason_ide/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/CoReason-AI/coreason_ide/actions/workflows/ci-cd.yml)
-[![PyPI](https://img.shields.io/pypi/v/coreason_ide.svg)](https://pypi.org/project/coreason_ide/)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/coreason_ide.svg)](https://pypi.org/project/coreason_ide/)
-[![License](https://img.shields.io/github/license/CoReason-AI/coreason_ide)](https://github.com/CoReason-AI/coreason_ide/blob/main/LICENSE)
-[![Codecov](https://codecov.io/gh/CoReason-AI/coreason_ide/branch/main/graph/badge.svg)](https://codecov.io/gh/CoReason-AI/coreason_ide)
-[![Downloads](https://static.pepy.tech/badge/coreason_ide)](https://pepy.tech/project/coreason_ide)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+*A Cybernetic Control Surface and Topological Canvas for the coreason-runtime Active Inference mesh.*
 
-## Getting Started
+## The Feature Grid
 
-### Prerequisites
+- **Topological Manifold:** A zero-intrinsic-state React Flow canvas rendering Directed Cyclic Graphs (DCG) via an ELK WebAssembly layout math engine.
+  [➔ Read the Operational Handbook](./docs/features/TDA_CANVAS.md)
 
-- Python 3.14+
-- uv
+- **Zero-Trust Sandbox:** A deterministic Capability Forge executing Model Context Protocol (MCP) intents within strict WebAssembly linear memory boundaries.
+  [➔ Read the Operational Handbook](./docs/features/CAPABILITY_FORGE.md)
 
-### Installation
+- **Human-AI Boundary Escalation:** An Epistemic Oracle handling Active Inference Markov Blanket piercing via strict state hydration routing.
+  [➔ Read the Operational Handbook](./docs/features/ORACLE_INBOX.md)
 
-1.  Clone the repository:
-    ```sh
-    git clone https://github.com/CoReason-AI/coreason_ide.git
-    cd coreason_ide
-    ```
-2.  Install dependencies:
-    ```sh
-    uv sync --all-extras --dev
-    ```
+- **Tensor-Driven Topology:** A Zero-Waste predictive synthesis render loop powered by local SGLang Tensor engines.
+  [➔ Read the Operational Handbook](./docs/features/PREDICTIVE_SYNTHESIS.md)
 
-### Usage
+## Zero-Waste Quickstart
 
--   Run the linter:
-    ```sh
-    uv run pre-commit run --all-files
-    ```
--   Run the tests:
-    ```sh
-    uv run pytest
-    ```
+```bash
+git clone https://github.com/coreason/coreason-vscode.git
+cd coreason-vscode
+npm ci
+npm run watch
+# Press F5 in VS Code to launch the Extension Development Host
+```

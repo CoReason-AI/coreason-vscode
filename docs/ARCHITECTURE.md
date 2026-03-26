@@ -6,18 +6,18 @@
 stateDiagram-v2
     direction TB
 
-    state "VS Code Realm" as vscode {
-        FS[VS Code File System]
-        Node[Extension Host]
+    state "VS Code Realm" {
+        FS : VS Code File System
+        Node : Extension Host
     }
 
-    state "Webview Realm" as webview {
-        React[React Webview]
-        WASM[ELK Web Worker]
+    state "Webview Realm" {
+        React : React Webview
+        WASM : ELK Web Worker
     }
 
-    state "Localhost Edge" as edge {
-        Python[coreason-runtime]
+    state "Localhost Edge" {
+        Python : coreason-runtime
     }
 
     FS --> Node: YAML/JSON Read
