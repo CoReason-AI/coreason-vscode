@@ -30,6 +30,7 @@
 git clone https://github.com/coreason/coreason-vscode.git
 cd coreason-vscode
 npm ci
+npm run build
 npm run watch
 # Press F5 in VS Code to launch the Extension Development Host
 ```

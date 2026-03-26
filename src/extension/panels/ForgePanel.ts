@@ -113,7 +113,6 @@ def test_${payload.capability}_crystallized():
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="connect-src http://localhost:8000;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CoReason Capability Forge</title>
     <style>
