@@ -2,29 +2,30 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    branches: [main, develop]
   pull_request:
-
-permissions:
-  contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [main, develop]
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    name: Build & Test (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [20.x] # SOTA LTS for VS Code extensions
+    runs-on: ${{ matrix.os }}
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      - name: Install dependencies
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install Dependencies
         run: npm ci
         shell: bash
       - name: Typecheck
@@ -44,3 +45,17 @@ jobs:
           flags: unittests
           name: codecov-coreason-vscode
           fail_ci_if_error: false
+
+      - name: Compile Extension & Webview (Vite/esbuild)
+        run: npm run build
+
+      - name: Pillar 1 & 2 - Pure Logic & React Components (Vitest)
+        run: npm run test
+
+      - name: Pillar 3 - Headless IDE Physics (Linux via Xvfb)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
+
+      - name: Pillar 3 - Native IDE Physics (Windows/macOS)
+        if: runner.os != 'Linux'
+        run: npm run test:e2e
