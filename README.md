@@ -56,3 +56,15 @@ The extension is fully compatible with modern forks running Engine `^1.90.0`. To
 ### 4. The Open VSX Dependency
 
 **Crucial Note:** This extension relies on the `redhat.vscode-yaml` dependency. Because the extension uses this language server, forks that do not connect to the Microsoft Marketplace must resolve this dependency via the Open VSX Registry.
+
+## Local Development & Troubleshooting
+
+When developing or debugging the extension locally (e.g., pressing `F5`), you may encounter some environment-specific issues:
+
+### 1. API Proposal Crashes (e.g., `chatSessionsProvider`)
+If the Extension Development Host fails to launch with errors like `Extension ... CANNOT use API proposal: chatSessionsProvider`, it means one of your personally installed extensions is bleeding into the development instance and crashing it. 
+**Fix:** We have configured `.vscode/launch.json` to include the `--disable-extensions` flag in its `args` array. This ensures the Host launches in an isolated, clean environment containing only `coreason-vscode`.
+
+### 2. Missing Binary Errors (e.g., `Failed to find the "go" binary`)
+If your native VS Code environment has global language extensions enabled (like `golang.go`), they might attempt to activate and crash if their respective binaries aren't found in your system's `PATH`.
+**Fix:** Install the missing toolchain on your OS (e.g., `choco install golang`) or disable the offending extension specifically for the `coreason-vscode` workspace in your IDE's Extensions panel.
