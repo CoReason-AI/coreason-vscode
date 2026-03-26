@@ -1,11 +1,29 @@
 import React, { useState, useEffect } from 'react';
 
+declare const acquireVsCodeApi: () => any;
+const vscodeApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : { postMessage: () => {} };
+
 export const CapabilityForge = () => {
     const [capabilities, setCapabilities] = useState<string[]>([]);
     const [selectedTool, setSelectedTool] = useState<string>('');
     const [intentJson, setIntentJson] = useState<string>('{\n  "arguments": {}\n}');
+    const [latentState, setLatentState] = useState<string>('{\n  "workflowId": "mock-123"\n}');
     const [receipt, setReceipt] = useState<string>('');
+    const [activeTab, setActiveTab] = useState<'output' | 'stdout' | 'physics'>('output');
     const [isLoading, setIsLoading] = useState(false);
+    const [isAgentDriving, setIsAgentDriving] = useState(false);
+
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message && message.type === 'SET_AGENT_DRIVING') {
+                setIsAgentDriving(message.payload);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
 
     useEffect(() => {
         // Fetch capabilities on mount
@@ -32,13 +50,19 @@ export const CapabilityForge = () => {
         setReceipt('Executing...');
         try {
             const parsedIntent = JSON.parse(intentJson);
+            const parsedState = JSON.parse(latentState);
+
+            const payload = {
+                intent: parsedIntent,
+                state: parsedState
+            };
 
             const response = await fetch('http://localhost:8000/api/v1/sandbox/execute', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: intentJson
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
@@ -48,6 +72,18 @@ export const CapabilityForge = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleCrystallize = () => {
+        vscodeApi.postMessage({
+            type: 'CRYSTALLIZE_TEST',
+            payload: {
+                capability: selectedTool,
+                state: latentState,
+                intent: intentJson,
+                output: receipt
+            }
+        });
     };
 
     return (
@@ -89,8 +125,26 @@ export const CapabilityForge = () => {
                     </select>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flexGrow: 1 }}>
-                    <label style={{ fontSize: '0.9em', fontWeight: 'bold' }}>MCP Client Intent (JSON)</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flexGrow: 1, opacity: isAgentDriving ? 0.5 : 1, pointerEvents: isAgentDriving ? 'none' : 'auto' }}>
+                    <label style={{ fontSize: '0.9em', fontWeight: 'bold' }}>Markov Blanket Context (JSON)</label>
+                    <textarea
+                        value={latentState}
+                        onChange={(e) => setLatentState(e.target.value)}
+                        style={{
+                            flexGrow: 1,
+                            padding: '10px',
+                            background: 'var(--vscode-input-background)',
+                            color: 'var(--vscode-input-foreground)',
+                            border: '1px solid var(--vscode-input-border)',
+                            fontFamily: 'var(--vscode-editor-font-family), monospace',
+                            resize: 'none',
+                            borderRadius: '2px'
+                        }}
+                    />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flexGrow: 1, opacity: isAgentDriving ? 0.5 : 1, pointerEvents: isAgentDriving ? 'none' : 'auto' }}>
+                    <label style={{ fontSize: '0.9em', fontWeight: 'bold' }}>Capability Arguments (JSON)</label>
                     <textarea
                         value={intentJson}
                         onChange={(e) => setIntentJson(e.target.value)}
@@ -107,22 +161,58 @@ export const CapabilityForge = () => {
                     />
                 </div>
 
-                <button
-                    onClick={executeSandbox}
-                    disabled={isLoading}
-                    style={{
-                        padding: '10px',
-                        background: 'var(--vscode-button-background)',
-                        color: 'var(--vscode-button-foreground)',
-                        border: 'none',
-                        borderRadius: '2px',
-                        cursor: isLoading ? 'not-allowed' : 'pointer',
-                        fontWeight: 'bold',
-                        opacity: isLoading ? 0.7 : 1
-                    }}
-                >
-                    {isLoading ? 'Executing...' : 'Execute Sandbox'}
-                </button>
+                {isAgentDriving ? (
+                    <button
+                        onClick={() => setIsAgentDriving(false)}
+                        style={{
+                            padding: '10px',
+                            background: 'var(--vscode-errorForeground)',
+                            color: 'var(--vscode-button-foreground)',
+                            border: 'none',
+                            borderRadius: '2px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        Override & Execute
+                    </button>
+                ) : (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            onClick={executeSandbox}
+                            disabled={isLoading}
+                            style={{
+                                flexGrow: 1,
+                                padding: '10px',
+                                background: 'var(--vscode-button-background)',
+                                color: 'var(--vscode-button-foreground)',
+                                border: 'none',
+                                borderRadius: '2px',
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
+                                fontWeight: 'bold',
+                                opacity: isLoading ? 0.7 : 1
+                            }}
+                        >
+                            {isLoading ? 'Executing...' : 'Execute Sandbox'}
+                        </button>
+                        <button
+                            onClick={handleCrystallize}
+                            disabled={isLoading || !receipt || receipt === 'Executing...' || receipt.startsWith('Error:')}
+                            style={{
+                                padding: '10px',
+                                background: 'var(--vscode-button-secondaryBackground)',
+                                color: 'var(--vscode-button-secondaryForeground)',
+                                border: '1px solid var(--vscode-button-border)',
+                                borderRadius: '2px',
+                                cursor: isLoading || !receipt || receipt === 'Executing...' || receipt.startsWith('Error:') ? 'not-allowed' : 'pointer',
+                                fontWeight: 'bold',
+                                opacity: isLoading || !receipt || receipt === 'Executing...' || receipt.startsWith('Error:') ? 0.7 : 1
+                            }}
+                        >
+                            ✨ Crystallize Contract
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Right Column */}
@@ -130,6 +220,27 @@ export const CapabilityForge = () => {
                 <h2 style={{ margin: 0, fontSize: '1.2em', borderBottom: '1px solid var(--vscode-panel-border)', paddingBottom: '10px' }}>
                     Execution Receipt
                 </h2>
+
+                <div style={{ display: 'flex', gap: '10px', borderBottom: '1px solid var(--vscode-panel-border)', paddingBottom: '5px' }}>
+                    {(['output', 'stdout', 'physics'] as const).map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            style={{
+                                padding: '5px 10px',
+                                background: activeTab === tab ? 'var(--vscode-button-background)' : 'transparent',
+                                color: activeTab === tab ? 'var(--vscode-button-foreground)' : 'var(--vscode-foreground)',
+                                border: 'none',
+                                borderRadius: '2px',
+                                cursor: 'pointer',
+                                textTransform: 'capitalize',
+                                fontWeight: activeTab === tab ? 'bold' : 'normal'
+                            }}
+                        >
+                            {tab === 'output' ? 'Output' : tab === 'stdout' ? 'StdOut / StdErr' : 'Physics'}
+                        </button>
+                    ))}
+                </div>
 
                 <div style={{
                     flexGrow: 1,
@@ -139,9 +250,21 @@ export const CapabilityForge = () => {
                     padding: '10px',
                     overflowY: 'auto'
                 }}>
-                    <pre style={{ margin: 0, fontFamily: 'var(--vscode-editor-font-family), monospace', fontSize: '0.9em', whiteSpace: 'pre-wrap' }}>
-                        <code>{receipt}</code>
-                    </pre>
+                    {activeTab === 'output' && (
+                        <pre style={{ margin: 0, fontFamily: 'var(--vscode-editor-font-family), monospace', fontSize: '0.9em', whiteSpace: 'pre-wrap' }}>
+                            <code>{receipt}</code>
+                        </pre>
+                    )}
+                    {activeTab === 'stdout' && (
+                        <pre style={{ margin: 0, fontFamily: 'var(--vscode-editor-font-family), monospace', fontSize: '0.9em', whiteSpace: 'pre-wrap', color: 'var(--vscode-terminal-foreground)' }}>
+                            <code>{receipt ? '[Mock] System logged execution context.\n[Mock] Binary initialized successfully.' : ''}</code>
+                        </pre>
+                    )}
+                    {activeTab === 'physics' && (
+                        <pre style={{ margin: 0, fontFamily: 'var(--vscode-editor-font-family), monospace', fontSize: '0.9em', whiteSpace: 'pre-wrap', color: 'var(--vscode-terminal-ansiBrightCyan)' }}>
+                            <code>{receipt ? 'Latency: 42ms\nMemory Allocation: 1.8MB out of 2.0MB limit\nCPU Time: 12ms' : ''}</code>
+                        </pre>
+                    )}
                 </div>
             </div>
         </div>

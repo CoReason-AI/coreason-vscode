@@ -38,11 +38,57 @@ export class ForgePanel {
 
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
 
-        this.panel.webview.onDidReceiveMessage((message) => {
+        this.panel.webview.onDidReceiveMessage(async (message) => {
             if (message.type === 'READY') {
                 this.panel.webview.postMessage({ type: 'SET_ROUTE', payload: 'FORGE' });
+            } else if (message.type === 'CRYSTALLIZE_TEST') {
+                await this.crystallizeTest(message.payload);
             }
         }, null, this.disposables);
+    }
+
+    private async crystallizeTest(payload: { capability: string; state: string; intent: string; output: string }) {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+            vscode.window.showErrorMessage('No workspace folder open. Cannot crystallize test.');
+            return;
+        }
+
+        const rootUri = workspaceFolders[0].uri;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const fileName = `test_capability_${payload.capability}_${timestamp}.py`;
+        const testUri = vscode.Uri.joinPath(rootUri, 'tests', 'sandbox', fileName);
+
+        const fileContent = `import pytest
+import json
+
+def test_${payload.capability}_crystallized():
+    # Latent State Context
+    latent_state = json.loads('''${payload.state}''')
+
+    # Execution Intent
+    intent = json.loads('''${payload.intent}''')
+
+    # Expected Output
+    expected_output = json.loads('''${payload.output}''')
+
+    # TODO: Implement actual sandbox execution assertion here
+    # result = execute_capability("${payload.capability}", latent_state, intent)
+    # assert result == expected_output
+
+    assert True
+`;
+
+        const edit = new vscode.WorkspaceEdit();
+        edit.createFile(testUri, { ignoreIfExists: false });
+        edit.insert(testUri, new vscode.Position(0, 0), fileContent);
+
+        try {
+            await vscode.workspace.applyEdit(edit);
+            vscode.window.showInformationMessage('✨ Epistemic Proof Crystallized.');
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to crystallize proof: ${error}`);
+        }
     }
 
     private update() {

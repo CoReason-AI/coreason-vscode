@@ -5,12 +5,15 @@ export type WebviewMessage =
   | { type: 'SET_ROUTE'; payload: 'MANIFOLD' | 'FORGE' | 'ORACLE' }
   | { type: 'SET_ORACLE_WORKFLOW'; payload: string }
   | { type: 'EDGE_CREATED'; payload: { source: string; target: string } }
-  | { type: 'REQUEST_SYNTHESIS' };
+  | { type: 'REQUEST_SYNTHESIS' }
+  | { type: 'CRYSTALLIZE_TEST'; payload: { capability: string; state: string; intent: string; output: string } }
+  | { type: 'OVERRIDE_AGENT_INTENT'; payload: { workflowId: string; correctedIntent: string } };
 
 export type ExtensionMessage =
   | { type: 'REQUEST_SCHEMA' }
   | { type: 'OPEN_FILE'; target: string }
-  | { type: 'YAML_UPDATE'; payload: string };
+  | { type: 'YAML_UPDATE'; payload: string }
+  | { type: 'SET_AGENT_DRIVING'; payload: boolean };
 
 export type WorkerMessage =
   | { type: 'LAYOUT_COMPLETE'; nodes: any[]; edges: any[] }
