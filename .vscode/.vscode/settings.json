@@ -1,0 +1,8 @@
+{
+    "yaml.schemas": {
+        "coreason-schema://schemas/swarm.json": [
+            "*.coreason.yaml",
+            "*.coreason.json"
+        ]
+    }
+}

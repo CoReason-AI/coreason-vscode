@@ -49,7 +49,7 @@ self.onmessage = async (event: MessageEvent) => {
             id: node.id,
             position: { x: node.x || 0, y: node.y || 0 },
             data: { label: node.id },
-            type: 'default',
+            type: 'agent',
         }));
 
         const reactFlowEdges = (layoutedGraph.edges || []).map((edge: any) => ({

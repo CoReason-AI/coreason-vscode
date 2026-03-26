@@ -4,8 +4,7 @@ import { TDACanvas } from './components/TDACanvas';
 import { CapabilityForge } from './components/CapabilityForge';
 import { OracleResolver } from './components/OracleResolver';
 
-declare const acquireVsCodeApi: () => any;
-const vscodeApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : { postMessage: () => {} };
+import { vscodeApi } from './vscodeApi';
 
 const App = () => {
     const [route, setRoute] = useState<'MANIFOLD' | 'FORGE' | 'ORACLE'>('MANIFOLD');

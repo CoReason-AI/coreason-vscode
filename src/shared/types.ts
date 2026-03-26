@@ -7,7 +7,8 @@ export type WebviewMessage =
   | { type: 'EDGE_CREATED'; payload: { source: string; target: string } }
   | { type: 'REQUEST_SYNTHESIS' }
   | { type: 'CRYSTALLIZE_TEST'; payload: { capability: string; state: string; intent: string; output: string } }
-  | { type: 'OVERRIDE_AGENT_INTENT'; payload: { workflowId: string; correctedIntent: string } };
+  | { type: 'OVERRIDE_AGENT_INTENT'; payload: { workflowId: string; correctedIntent: string } }
+  | { type: 'AGENT_SUSPENDED'; payload: { isAgentDriving: boolean } };
 
 export type ExtensionMessage =
   | { type: 'REQUEST_SCHEMA' }

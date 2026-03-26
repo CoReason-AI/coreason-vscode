@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-declare const acquireVsCodeApi: () => any;
-const vscodeApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : { postMessage: () => {} };
+import { vscodeApi } from '../vscodeApi';
 
 export const CapabilityForge = () => {
     const [capabilities, setCapabilities] = useState<string[]>([]);
@@ -18,6 +17,8 @@ export const CapabilityForge = () => {
             const message = event.data;
             if (message && message.type === 'SET_AGENT_DRIVING') {
                 setIsAgentDriving(message.payload);
+            } else if (message && message.type === 'AGENT_SUSPENDED') {
+                setIsAgentDriving(message.payload.isAgentDriving);
             }
         };
 
