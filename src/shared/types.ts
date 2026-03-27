@@ -27,7 +27,15 @@ export type WebviewMessage =
   | { type: 'REQUEST_SYNTHESIS' }
   | { type: 'CRYSTALLIZE_TEST'; payload: { capability: string; state: string; intent: string; output: string } }
   | { type: 'OVERRIDE_AGENT_INTENT'; payload: { workflowId: string; correctedIntent: string } }
-  | { type: 'AGENT_SUSPENDED'; payload: { isAgentDriving: boolean } }
+  | {
+      type: 'AGENT_SUSPENDED';
+      payload: {
+        isAgentDriving: boolean;
+        workflowId?: string;
+        latentState?: any;
+        intent?: any;
+      }
+    }
   | { type: 'EXECUTE_CAPABILITY'; payload: { toolName: string; intent: any } };
 
 export type ExtensionMessage =

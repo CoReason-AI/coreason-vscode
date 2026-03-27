@@ -51,6 +51,18 @@ export class ForgePanel {
         }, null, this.disposables);
     }
 
+    public triggerOracleLock(workflowId: string, latentState: any, intent: any) {
+        this.panel.webview.postMessage({
+            type: 'AGENT_SUSPENDED',
+            payload: {
+                isAgentDriving: true,
+                workflowId,
+                latentState,
+                intent
+            }
+        });
+    }
+
     private escapeForPythonJsonLoads(str: string): string {
         return JSON.stringify(str).slice(1, -1).replace(/'/g, "\\'");
     }

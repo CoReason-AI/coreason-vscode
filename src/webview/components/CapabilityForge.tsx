@@ -20,6 +20,14 @@ export const CapabilityForge = () => {
                 setIsAgentDriving(message.payload);
             } else if (message && message.type === 'AGENT_SUSPENDED') {
                 setIsAgentDriving(message.payload.isAgentDriving);
+                if (message.payload.isAgentDriving) {
+                    if (message.payload.latentState) {
+                        setLatentState(JSON.stringify(message.payload.latentState, null, 2));
+                    }
+                    if (message.payload.intent) {
+                        setIntentJson(JSON.stringify(message.payload.intent, null, 2));
+                    }
+                }
             } else if (message && message.type === 'CAPABILITY_EXECUTED') {
                 setReceipt(message.payload);
                 setIsLoading(false);

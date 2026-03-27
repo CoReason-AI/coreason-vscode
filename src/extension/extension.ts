@@ -4,6 +4,7 @@ import { ManifoldPanel } from './panels/ManifoldPanel';
 import { ForgePanel } from './panels/ForgePanel';
 import { OraclePanel } from './panels/OraclePanel';
 import { OracleTreeProvider } from './providers/OracleTreeProvider';
+import { TelemetryClient } from './network/telemetryClient';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('CoReason Projection Manifold activated.');
@@ -50,6 +51,15 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(oracleDisposable);
+
+    const telemetryClient = new TelemetryClient((workflowId, latentState, intent) => {
+        if (ForgePanel.currentPanel) {
+            ForgePanel.currentPanel.triggerOracleLock(workflowId, latentState, intent);
+        } else {
+            vscode.window.showInformationMessage('Agent Suspended: ' + workflowId + '. Open Forge to resolve.');
+        }
+    });
+    telemetryClient.connect();
 
     let timeout: NodeJS.Timeout | undefined;
 
