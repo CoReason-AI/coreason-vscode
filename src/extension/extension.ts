@@ -43,7 +43,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(forgeDisposable);
 
-    const oracleTreeProvider = new OracleTreeProvider();
+    const telemetryClient = new TelemetryClient();
+    OraclePanel.telemetryClient = telemetryClient;
+
+    const oracleTreeProvider = new OracleTreeProvider(telemetryClient);
     vscode.window.registerTreeDataProvider('coreason-oracle-inbox', oracleTreeProvider);
 
     const oracleDisposable = vscode.commands.registerCommand('coreason.resolveOracle', (workflowId?: string) => {
@@ -52,16 +55,17 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(oracleDisposable);
 
-    const telemetryClient = new TelemetryClient((workflowId, latentState, intent) => {
-        if (ForgePanel.currentPanel) {
-            ForgePanel.currentPanel.triggerOracleLock(workflowId, latentState, intent);
+    telemetryClient.on('agent_suspended', (workflowId, latentState, intent) => {
+        if (OraclePanel.currentPanel) {
+            OraclePanel.currentPanel.triggerOracleLock(workflowId, latentState, intent);
         } else {
-            vscode.window.showInformationMessage('Agent Suspended: ' + workflowId + '. Open Forge to resolve.');
+            OraclePanel.createOrShow(context.extensionUri, workflowId);
+            OraclePanel.currentPanel?.triggerOracleLock(workflowId, latentState, intent);
         }
     });
     telemetryClient.connect();
 
-    let timeout: NodeJS.Timeout | undefined;
+    const debounceTimers = new Map<string, NodeJS.Timeout>();
 
     context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument((event) => {
@@ -69,15 +73,18 @@ export function activate(context: vscode.ExtensionContext) {
                 event.document.languageId === 'yaml' ||
                 event.document.fileName.endsWith('.coreason.yaml')
             ) {
+                const uriString = event.document.uri.toString();
+                const timeout = debounceTimers.get(uriString);
                 if (timeout) {
                     clearTimeout(timeout);
                 }
-                timeout = setTimeout(() => {
-                    const text = event.document.getText();
+                const newTimeout = setTimeout(() => {
                     if (ManifoldPanel.currentPanel) {
-                        ManifoldPanel.currentPanel.updateCanvas(text);
+                        ManifoldPanel.currentPanel.updateCanvas(event.document);
                     }
+                    debounceTimers.delete(uriString);
                 }, 300);
+                debounceTimers.set(uriString, newTimeout);
             }
         })
     );
@@ -89,9 +96,8 @@ export function activate(context: vscode.ExtensionContext) {
                 (editor.document.languageId === 'yaml' ||
                     editor.document.fileName.endsWith('.coreason.yaml'))
             ) {
-                const text = editor.document.getText();
                 if (ManifoldPanel.currentPanel) {
-                    ManifoldPanel.currentPanel.updateCanvas(text);
+                    ManifoldPanel.currentPanel.updateCanvas(editor.document);
                 }
             }
         })

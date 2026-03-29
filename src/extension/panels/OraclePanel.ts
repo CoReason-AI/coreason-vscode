@@ -1,11 +1,15 @@
 import * as vscode from 'vscode';
 import { WebviewMessage } from '../../shared/types';
+import { TelemetryClient } from '../network/telemetryClient';
 
 export class OraclePanel {
     public static currentPanel: OraclePanel | undefined;
+    public static telemetryClient: TelemetryClient | undefined;
     private readonly panel: vscode.WebviewPanel;
     private readonly extensionUri: vscode.Uri;
     private disposables: vscode.Disposable[] = [];
+    private _isReady: boolean = false;
+    private _messageQueue: any[] = [];
 
     public static createOrShow(extensionUri: vscode.Uri, workflowId?: string) {
         const column = vscode.window.activeTextEditor
@@ -27,6 +31,7 @@ export class OraclePanel {
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
+                retainContextWhenHidden: true,
                 localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'dist')],
             }
         );
@@ -42,14 +47,43 @@ export class OraclePanel {
 
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
 
-        this.panel.webview.onDidReceiveMessage((message) => {
+        this.panel.webview.onDidReceiveMessage(async (message) => {
             if (message.type === 'READY') {
+                this._isReady = true;
                 this.panel.webview.postMessage({ type: 'SET_ROUTE', payload: 'ORACLE' });
                 if (workflowId) {
                     this.panel.webview.postMessage({ type: 'SET_ORACLE_WORKFLOW', payload: workflowId });
                 }
+                while (this._messageQueue.length > 0) {
+                    const queuedMsg = this._messageQueue.shift();
+                    this.panel.webview.postMessage(queuedMsg);
+                }
+            } else if (message.type === 'SUBMIT' || message.type === 'RESOLVE') {
+                if (OraclePanel.telemetryClient) {
+                    await OraclePanel.telemetryClient.resumeWorkflow(
+                        (message as any).payload.workflowId,
+                        (message as any).payload.correctedIntent
+                    );
+                }
             }
         }, null, this.disposables);
+    }
+
+    public triggerOracleLock(workflowId: string, latentState: any, intent: any) {
+        const message = {
+            type: 'AGENT_SUSPENDED',
+            payload: {
+                isAgentDriving: true,
+                workflowId,
+                latentState,
+                intent
+            }
+        };
+        if (!this._isReady) {
+            this._messageQueue.push(message);
+        } else {
+            this.panel.webview.postMessage(message);
+        }
     }
 
     private update() {
@@ -61,12 +95,14 @@ export class OraclePanel {
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview.js')
         );
+        const nonce = Math.random().toString(36).substring(2, 15);
 
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <title>CoReason Epistemic Oracle</title>
     <style>
         html, body {
@@ -86,7 +122,7 @@ export class OraclePanel {
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="${scriptUri}"></script>
+    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
     }
