@@ -16,6 +16,10 @@ export const OracleResolver = () => {
         };
 
         window.addEventListener('message', handleMessage);
+
+        // Handshake: Let the extension know the Oracle UI is mounted and ready
+        vscodeApi.postMessage({ type: 'READY_ORACLE' });
+
         return () => window.removeEventListener('message', handleMessage);
     }, []);
 

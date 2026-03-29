@@ -9,6 +9,7 @@ export class OraclePanel {
     private readonly extensionUri: vscode.Uri;
     private disposables: vscode.Disposable[] = [];
     private _isReady: boolean = false;
+    private _isOracleReady: boolean = false;
     private _messageQueue: any[] = [];
 
     public static createOrShow(extensionUri: vscode.Uri, workflowId?: string) {
@@ -20,7 +21,11 @@ export class OraclePanel {
             OraclePanel.currentPanel.panel.reveal(column);
             if (workflowId) {
                 const message: WebviewMessage = { type: 'SET_ORACLE_WORKFLOW', payload: workflowId };
-                OraclePanel.currentPanel.panel.webview.postMessage(message);
+                if (OraclePanel.currentPanel._isOracleReady) {
+                    OraclePanel.currentPanel.panel.webview.postMessage(message);
+                } else {
+                    OraclePanel.currentPanel._messageQueue.push(message);
+                }
             }
             return;
         }
@@ -43,6 +48,10 @@ export class OraclePanel {
         this.panel = panel;
         this.extensionUri = extensionUri;
 
+        if (workflowId) {
+            this._messageQueue.push({ type: 'SET_ORACLE_WORKFLOW', payload: workflowId });
+        }
+
         this.update();
 
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -51,9 +60,8 @@ export class OraclePanel {
             if (message.type === 'READY') {
                 this._isReady = true;
                 this.panel.webview.postMessage({ type: 'SET_ROUTE', payload: 'ORACLE' });
-                if (workflowId) {
-                    this.panel.webview.postMessage({ type: 'SET_ORACLE_WORKFLOW', payload: workflowId });
-                }
+            } else if (message.type === 'READY_ORACLE') {
+                this._isOracleReady = true;
                 while (this._messageQueue.length > 0) {
                     const queuedMsg = this._messageQueue.shift();
                     this.panel.webview.postMessage(queuedMsg);
@@ -79,7 +87,7 @@ export class OraclePanel {
                 intent
             }
         };
-        if (!this._isReady) {
+        if (!this._isOracleReady) {
             this._messageQueue.push(message);
         } else {
             this.panel.webview.postMessage(message);

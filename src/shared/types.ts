@@ -20,6 +20,7 @@ export interface SandboxReceipt {
 
 export type WebviewMessage =
   | { type: 'READY' }
+  | { type: 'READY_ORACLE' }
   | { type: 'SCHEMA_UPDATE'; payload: unknown }
   | { type: 'SET_ROUTE'; payload: 'MANIFOLD' | 'FORGE' | 'ORACLE' }
   | { type: 'SET_ORACLE_WORKFLOW'; payload: string }
