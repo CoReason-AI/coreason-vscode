@@ -70,44 +70,57 @@ export class ForgePanel {
         });
     }
 
-    private escapeForPythonJsonLoads(str: string): string {
-        return JSON.stringify(str).slice(1, -1).replace(/'/g, "\\'");
-    }
-
     private async crystallizeTest(payload: { capability: string; state: string; intent: string; output: string }) {
         const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders || workspaceFolders.length === 0) {
+        let rootUri: vscode.Uri | undefined;
+        const editor = vscode.window.activeTextEditor;
+        if (editor) {
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+            rootUri = workspaceFolder?.uri;
+        }
+        if (!rootUri && workspaceFolders && workspaceFolders.length > 0) {
+            rootUri = workspaceFolders[0].uri;
+        }
+
+        if (!rootUri) {
             vscode.window.showErrorMessage('No workspace folder open. Cannot crystallize test.');
             return;
         }
 
-        const rootUri = workspaceFolders[0].uri;
+        const sanitizedId = payload.capability.replace(/-/g, '_');
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const fileName = `test_capability_${payload.capability}_${timestamp}.py`;
+        const fileName = `test_capability_${sanitizedId}_${timestamp}.py`;
         const testUri = vscode.Uri.joinPath(rootUri, 'tests', 'sandbox', fileName);
+        const fixtureUri = vscode.Uri.joinPath(rootUri, 'tests', 'sandbox', `${sanitizedId}_fixture.json`);
 
-        const safeState = this.escapeForPythonJsonLoads(payload.state);
-        const safeIntent = this.escapeForPythonJsonLoads(payload.intent);
-        const safeOutput = this.escapeForPythonJsonLoads(payload.output);
+        const fixtureData = {
+            latent_state: JSON.parse(payload.state),
+            intent: JSON.parse(payload.intent),
+            expected_output: JSON.parse(payload.output)
+        };
+        const fixtureContent = new TextEncoder().encode(JSON.stringify(fixtureData, null, 2));
 
         const fileContent = `import pytest
 import json
+import extism
 
-def test_${payload.capability}_crystallized():
+def test_${sanitizedId}_crystallized():
+    with open("${sanitizedId}_fixture.json", "r") as f:
+        fixture = json.load(f)
+
     # Latent State Context
-    latent_state = json.loads('${safeState}')
+    latent_state = fixture['latent_state']
 
     # Execution Intent
-    intent = json.loads('${safeIntent}')
+    intent = fixture['intent']
 
     # Expected Output
-    expected_output = json.loads('${safeOutput}')
+    expected_output = fixture['expected_output']
 
-    # TODO: Implement actual sandbox execution assertion here
-    # result = execute_capability("${payload.capability}", latent_state, intent)
-    # assert result == expected_output
+    plugin = extism.Plugin("${sanitizedId}.wasm")
+    result = plugin.call("test", json.dumps(intent))
 
-    assert True
+    assert json.loads(result) == expected_output
 `;
 
         const edit = new vscode.WorkspaceEdit();
@@ -115,6 +128,7 @@ def test_${payload.capability}_crystallized():
         edit.insert(testUri, new vscode.Position(0, 0), fileContent);
 
         try {
+            await vscode.workspace.fs.writeFile(fixtureUri, fixtureContent);
             await vscode.workspace.applyEdit(edit);
             vscode.window.showInformationMessage('✨ Epistemic Proof Crystallized.');
         } catch (error) {
