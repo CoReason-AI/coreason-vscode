@@ -37,6 +37,17 @@ export class ManifoldPanel {
         this.panel = panel;
         this.extensionUri = extensionUri;
 
+        const editor = vscode.window.activeTextEditor;
+        if (editor && (editor.document.languageId === 'yaml' || editor.document.fileName.endsWith('.coreason.yaml'))) {
+            this.currentUri = editor.document.uri;
+        }
+
+        vscode.window.onDidChangeActiveTextEditor(e => {
+            if (e && (e.document.languageId === 'yaml' || e.document.fileName.endsWith('.coreason.yaml'))) {
+                this.currentUri = e.document.uri;
+            }
+        }, null, this.disposables);
+
         this.update();
 
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
@@ -54,7 +65,7 @@ export class ManifoldPanel {
 
                 try {
                     const currentYamlText = doc.getText();
-                    const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
+                    const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
 
                     const response = await fetch(`http://localhost:${port}/api/v1/predict/topology`, {
                         method: 'POST',
@@ -73,28 +84,74 @@ export class ManifoldPanel {
                     const document = await vscode.workspace.openTextDocument(currentUri);
                     const text = document.getText();
 
-                    if (text !== newYamlText) {
-                        const edit = new vscode.WorkspaceEdit();
-                        const changes = diff.diffLines(text, newYamlText);
-                        let currentLine = 0;
+                    let hasConflict = false;
 
-                        for (const change of changes) {
+                    if (text !== currentYamlText) {
+                        const userChanges = diff.diffLines(currentYamlText, text);
+                        const llmChanges = diff.diffLines(currentYamlText, newYamlText);
+
+                        let originalLineIndex = 0;
+                        const userModifiedLines = new Set<number>();
+                        for (const change of userChanges) {
                             if (change.added) {
-                                edit.insert(document.uri, new vscode.Position(currentLine, 0), change.value);
+                                userModifiedLines.add(originalLineIndex);
                             } else if (change.removed) {
-                                const linesRemoved = change.count || 0;
-                                const range = new vscode.Range(
-                                    new vscode.Position(currentLine, 0),
-                                    new vscode.Position(currentLine + linesRemoved, 0)
-                                );
-                                edit.delete(document.uri, range);
-                                currentLine += linesRemoved;
+                                const count = change.count || 0;
+                                for (let i = 0; i < count; i++) {
+                                    userModifiedLines.add(originalLineIndex + i);
+                                }
+                                originalLineIndex += count;
                             } else {
-                                currentLine += change.count || 0;
+                                originalLineIndex += change.count || 0;
                             }
                         }
 
-                        await vscode.workspace.applyEdit(edit);
+                        originalLineIndex = 0;
+                        for (const change of llmChanges) {
+                            if (change.added) {
+                                if (userModifiedLines.has(originalLineIndex)) {
+                                    hasConflict = true;
+                                    break;
+                                }
+                            } else if (change.removed) {
+                                const count = change.count || 0;
+                                for (let i = 0; i < count; i++) {
+                                    if (userModifiedLines.has(originalLineIndex + i)) {
+                                        hasConflict = true;
+                                        break;
+                                    }
+                                }
+                                originalLineIndex += count;
+                            } else {
+                                originalLineIndex += change.count || 0;
+                            }
+                            if (hasConflict) break;
+                        }
+                    }
+
+                    if (hasConflict) {
+                        vscode.window.showWarningMessage('Synthesis aborted: Document was modified in the exact locations the LLM was targeting.');
+                        return;
+                    }
+
+                    if (text !== newYamlText) {
+                        // Apply patches to correctly map changes onto the potentially shifted lines of `text`.
+                        // Using diff.createPatch and diff.applyPatch ensures we don't blindly overwrite user changes.
+                        const patch = diff.createPatch(document.fileName, currentYamlText, newYamlText);
+                        const patchedText = diff.applyPatch(text, patch);
+
+                        if (patchedText !== false && patchedText !== text) {
+                            const edit = new vscode.WorkspaceEdit();
+                            const fullRange = new vscode.Range(
+                                document.positionAt(0),
+                                document.positionAt(text.length)
+                            );
+                            edit.replace(document.uri, fullRange, patchedText);
+                            await vscode.workspace.applyEdit(edit);
+                        } else if (patchedText === false) {
+                            // If patch application failed, fallback to warning the user
+                            vscode.window.showWarningMessage('Synthesis aborted: Unable to cleanly merge changes into the modified document.');
+                        }
                     }
                 } catch (error) {
                     console.error('Synthesis failed:', error);

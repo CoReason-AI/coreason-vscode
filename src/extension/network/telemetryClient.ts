@@ -16,7 +16,7 @@ export class TelemetryClient extends EventEmitter {
     public connect() {
         if (this.isConnected) return;
 
-        const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
+        const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
         const url = `http://localhost:${port}/api/v1/telemetry/stream`;
 
         console.log(`[TelemetryClient] Connecting to SSE stream at ${url}...`);

@@ -35,6 +35,18 @@ export const CapabilityForge = () => {
             } else if (message && message.type === 'CAPABILITY_EXECUTED') {
                 setReceipt(message.payload);
                 setIsLoading(false);
+            } else if (message && message.type === 'CAPABILITIES_FETCHED') {
+                const data = message.payload;
+                const caps = Array.isArray(data) ? data.map((c: any) => c.name || c) : [];
+                setCapabilities(caps);
+                if (caps.length > 0) {
+                    setSelectedTool(caps[0]);
+                }
+            } else if (message && message.type === 'CAPABILITIES_FETCHED_ERROR') {
+                console.error("Failed to fetch capabilities:", message.payload);
+                // Fallback for UI if API is down
+                setCapabilities(['math_calculator', 'string_processor', 'shell_executor']);
+                setSelectedTool('math_calculator');
             }
         };
 
@@ -43,23 +55,7 @@ export const CapabilityForge = () => {
     }, []);
 
     useEffect(() => {
-        // Fetch capabilities on mount
-        fetch('http://localhost:8000/api/v1/schema/capabilities')
-            .then(res => res.json())
-            .then(data => {
-                // Assuming data is an array of capability names or objects with a name property
-                const caps = Array.isArray(data) ? data.map((c: any) => c.name || c) : [];
-                setCapabilities(caps);
-                if (caps.length > 0) {
-                    setSelectedTool(caps[0]);
-                }
-            })
-            .catch(err => {
-                console.error("Failed to fetch capabilities:", err);
-                // Fallback for UI if API is down
-                setCapabilities(['math_calculator', 'string_processor', 'shell_executor']);
-                setSelectedTool('math_calculator');
-            });
+        vscodeApi.postMessage({ type: 'FETCH_CAPABILITIES' });
     }, []);
 
     const executeSandbox = async () => {

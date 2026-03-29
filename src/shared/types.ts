@@ -20,7 +20,6 @@ export interface SandboxReceipt {
 
 export type WebviewMessage =
   | { type: 'READY' }
-  | { type: 'READY_ORACLE' }
   | { type: 'SCHEMA_UPDATE'; payload: unknown }
   | { type: 'SET_ROUTE'; payload: 'MANIFOLD' | 'FORGE' | 'ORACLE' }
   | { type: 'SET_ORACLE_WORKFLOW'; payload: string }
@@ -39,14 +38,19 @@ export type WebviewMessage =
     }
   | { type: 'EXECUTE_CAPABILITY'; payload: { toolName: string; intent: any } }
   | { type: 'SUBMIT'; payload: { workflowId: string; correctedIntent: any } }
-  | { type: 'RESOLVE'; payload: { workflowId: string; correctedIntent: any } };
+  | { type: 'RESOLVE'; payload: { workflowId: string; correctedIntent: any } }
+  | { type: 'FETCH_CAPABILITIES' }
+  | { type: 'CAPABILITIES_FETCHED'; payload: any }
+  | { type: 'CAPABILITIES_FETCHED_ERROR'; payload: any };
 
 export type ExtensionMessage =
   | { type: 'REQUEST_SCHEMA' }
   | { type: 'OPEN_FILE'; target: string }
   | { type: 'YAML_UPDATE'; payload: string }
   | { type: 'SET_AGENT_DRIVING'; payload: boolean }
-  | { type: 'CAPABILITY_EXECUTED'; payload: SandboxReceipt };
+  | { type: 'CAPABILITY_EXECUTED'; payload: SandboxReceipt }
+  | { type: 'CAPABILITIES_FETCHED'; payload: any }
+  | { type: 'CAPABILITIES_FETCHED_ERROR'; payload: any };
 
 export type WorkerMessage =
   | { type: 'LAYOUT_COMPLETE'; nodes: any[]; edges: any[] }

@@ -4,7 +4,7 @@ import { SandboxReceipt } from '../../shared/types';
 let outputChannel: vscode.OutputChannel | undefined;
 
 export async function fetchTopologySchema(): Promise<string | null> {
-    const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
+    const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
     try {
         const response = await fetch(`http://localhost:${port}/api/v1/schema/topology/swarm`);
         if (!response.ok) {
@@ -22,7 +22,7 @@ export async function fetchTopologySchema(): Promise<string | null> {
 }
 
 export async function executeSandbox(toolName: string, intent: any): Promise<SandboxReceipt> {
-    const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
+    const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
     try {
         const payload = {
             intent: intent.intent,
@@ -57,7 +57,7 @@ export async function executeSandbox(toolName: string, intent: any): Promise<San
 }
 
 export async function resumeOracleWorkflow(workflowId: string, correctedIntent: string): Promise<boolean> {
-    const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
+    const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
     try {
         const payload = {
             corrected_intent: JSON.parse(correctedIntent)

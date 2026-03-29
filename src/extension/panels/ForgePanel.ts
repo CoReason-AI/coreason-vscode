@@ -43,6 +43,20 @@ export class ForgePanel {
         this.panel.webview.onDidReceiveMessage(async (message) => {
             if (message.type === 'READY') {
                 this.panel.webview.postMessage({ type: 'SET_ROUTE', payload: 'FORGE' });
+            } else if (message.type === 'FETCH_CAPABILITIES') {
+                const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
+                try {
+                    const response = await fetch(`http://localhost:${port}/api/v1/schema/capabilities`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.panel.webview.postMessage({ type: 'CAPABILITIES_FETCHED', payload: data });
+                    } else {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch capabilities:", error);
+                    this.panel.webview.postMessage({ type: 'CAPABILITIES_FETCHED_ERROR', payload: error });
+                }
             } else if (message.type === 'CRYSTALLIZE_TEST') {
                 await this.crystallizeTest(message.payload);
             } else if (message.type === 'EXECUTE_CAPABILITY') {

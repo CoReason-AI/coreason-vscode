@@ -106,6 +106,17 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    context.subscriptions.push(
+        vscode.workspace.onDidCloseTextDocument((document) => {
+            const uriString = document.uri.toString();
+            const timeout = debounceTimers.get(uriString);
+            if (timeout) {
+                clearTimeout(timeout);
+                debounceTimers.delete(uriString);
+            }
+        })
+    );
 }
 
 export function deactivate() {
