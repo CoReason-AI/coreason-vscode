@@ -36,7 +36,9 @@ export type WebviewMessage =
         intent?: any;
       }
     }
-  | { type: 'EXECUTE_CAPABILITY'; payload: { toolName: string; intent: any } };
+  | { type: 'EXECUTE_CAPABILITY'; payload: { toolName: string; intent: any } }
+  | { type: 'SUBMIT'; payload: { workflowId: string; correctedIntent: any } }
+  | { type: 'RESOLVE'; payload: { workflowId: string; correctedIntent: any } };
 
 export type ExtensionMessage =
   | { type: 'REQUEST_SCHEMA' }

@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import { ExtensionMessage } from '../../shared/types';
+import * as diff from 'diff';
 
 export class ManifoldPanel {
     public static currentPanel: ManifoldPanel | undefined;
     private readonly panel: vscode.WebviewPanel;
     private readonly extensionUri: vscode.Uri;
     private disposables: vscode.Disposable[] = [];
+    private currentUri: vscode.Uri | undefined;
 
     public static createOrShow(extensionUri: vscode.Uri) {
         const column = vscode.window.activeTextEditor
@@ -23,6 +25,7 @@ export class ManifoldPanel {
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
+                retainContextWhenHidden: true,
                 localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'dist')],
             }
         );
@@ -40,15 +43,20 @@ export class ManifoldPanel {
 
         this.panel.webview.onDidReceiveMessage(async (message) => {
             if (message.type === 'REQUEST_SYNTHESIS') {
-                const editor = vscode.window.activeTextEditor;
-                if (!editor) {
+                const currentUri = this.currentUri;
+                if (!currentUri) {
+                    return;
+                }
+                const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === currentUri.toString());
+                if (!doc) {
                     return;
                 }
 
                 try {
-                    const currentYamlText = editor.document.getText();
+                    const currentYamlText = doc.getText();
+                    const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
 
-                    const response = await fetch('http://localhost:8000/api/v1/predict/topology', {
+                    const response = await fetch(`http://localhost:${port}/api/v1/predict/topology`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'text/plain'
@@ -62,11 +70,32 @@ export class ManifoldPanel {
 
                     const newYamlText = await response.text();
 
-                    const edit = new vscode.WorkspaceEdit();
-                    const fullRange = new vscode.Range(0, 0, editor.document.lineCount, 0);
-                    edit.replace(editor.document.uri, fullRange, newYamlText);
+                    const document = await vscode.workspace.openTextDocument(currentUri);
+                    const text = document.getText();
 
-                    await vscode.workspace.applyEdit(edit);
+                    if (text !== newYamlText) {
+                        const edit = new vscode.WorkspaceEdit();
+                        const changes = diff.diffLines(text, newYamlText);
+                        let currentLine = 0;
+
+                        for (const change of changes) {
+                            if (change.added) {
+                                edit.insert(document.uri, new vscode.Position(currentLine, 0), change.value);
+                            } else if (change.removed) {
+                                const linesRemoved = change.count || 0;
+                                const range = new vscode.Range(
+                                    new vscode.Position(currentLine, 0),
+                                    new vscode.Position(currentLine + linesRemoved, 0)
+                                );
+                                edit.delete(document.uri, range);
+                                currentLine += linesRemoved;
+                            } else {
+                                currentLine += change.count || 0;
+                            }
+                        }
+
+                        await vscode.workspace.applyEdit(edit);
+                    }
                 } catch (error) {
                     console.error('Synthesis failed:', error);
                     vscode.window.showErrorMessage('Synthesis Engine Offline');
@@ -75,8 +104,9 @@ export class ManifoldPanel {
         }, null, this.disposables);
     }
 
-    public updateCanvas(yamlText: string) {
-        const message: ExtensionMessage = { type: 'YAML_UPDATE', payload: yamlText };
+    public updateCanvas(document: vscode.TextDocument) {
+        this.currentUri = document.uri;
+        const message: ExtensionMessage = { type: 'YAML_UPDATE', payload: document.getText() };
         this.panel.webview.postMessage(message);
     }
 
@@ -89,12 +119,14 @@ export class ManifoldPanel {
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview.js')
         );
+        const nonce = Math.random().toString(36).substring(2, 15);
 
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <title>CoReason TDA Canvas</title>
     <style>
         html, body {
@@ -114,7 +146,7 @@ export class ManifoldPanel {
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="${scriptUri}"></script>
+    <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
     }

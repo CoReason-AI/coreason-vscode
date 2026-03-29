@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { vscodeApi } from '../vscodeApi';
 
 export const OracleResolver = () => {
     const [workflowId, setWorkflowId] = useState<string>('');
@@ -28,26 +29,26 @@ export const OracleResolver = () => {
         setStatus('Submitting...');
         try {
             const parsedResolution = JSON.parse(resolutionData);
-
-            const response = await fetch(`http://localhost:8000/api/v1/oracle/resolve/${encodeURIComponent(workflowId)}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(parsedResolution)
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setStatus(`Success: ${JSON.stringify(data)}`);
-            } else {
-                const text = await response.text();
-                setStatus(`Error: HTTP ${response.status} - ${text}`);
-            }
+            vscodeApi.postMessage({ type: 'SUBMIT', payload: { workflowId, correctedIntent: parsedResolution } });
+            setStatus('Success: Resolution submitted to host.');
         } catch (error: any) {
             setStatus(`Error: ${error.message || String(error)}`);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const resolveAction = () => {
+        if (!workflowId) {
+            setStatus('Error: Workflow ID is required.');
+            return;
+        }
+        try {
+            const parsedResolution = JSON.parse(resolutionData);
+            vscodeApi.postMessage({ type: 'RESOLVE', payload: { workflowId, correctedIntent: parsedResolution } });
+            setStatus('Success: Resolve action sent to host.');
+        } catch (error: any) {
+            setStatus(`Error: ${error.message || String(error)}`);
         }
     };
 
@@ -110,24 +111,40 @@ export const OracleResolver = () => {
                     />
                 </div>
 
-                <button
-                    onClick={submitResolution}
-                    disabled={isLoading}
-                    style={{
-                        padding: '10px 20px',
-                        background: 'var(--vscode-button-background)',
-                        color: 'var(--vscode-button-foreground)',
-                        border: 'none',
-                        borderRadius: '2px',
-                        cursor: isLoading ? 'not-allowed' : 'pointer',
-                        fontWeight: 'bold',
-                        opacity: isLoading ? 0.7 : 1,
-                        alignSelf: 'center',
-                        marginTop: '10px'
-                    }}
-                >
-                    {isLoading ? 'Submitting...' : 'Submit Resolution'}
-                </button>
+                <div style={{ display: 'flex', gap: '10px', alignSelf: 'center', marginTop: '10px' }}>
+                    <button
+                        onClick={submitResolution}
+                        disabled={isLoading}
+                        style={{
+                            padding: '10px 20px',
+                            background: 'var(--vscode-button-background)',
+                            color: 'var(--vscode-button-foreground)',
+                            border: 'none',
+                            borderRadius: '2px',
+                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            fontWeight: 'bold',
+                            opacity: isLoading ? 0.7 : 1
+                        }}
+                    >
+                        {isLoading ? 'Submitting...' : 'Submit Resolution'}
+                    </button>
+                    <button
+                        onClick={resolveAction}
+                        disabled={isLoading}
+                        style={{
+                            padding: '10px 20px',
+                            background: 'var(--vscode-button-secondaryBackground)',
+                            color: 'var(--vscode-button-secondaryForeground)',
+                            border: 'none',
+                            borderRadius: '2px',
+                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            fontWeight: 'bold',
+                            opacity: isLoading ? 0.7 : 1
+                        }}
+                    >
+                        Resolve
+                    </button>
+                </div>
 
                 {status && (
                     <div style={{

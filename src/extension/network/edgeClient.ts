@@ -4,8 +4,9 @@ import { SandboxReceipt } from '../../shared/types';
 let outputChannel: vscode.OutputChannel | undefined;
 
 export async function fetchTopologySchema(): Promise<string | null> {
+    const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
     try {
-        const response = await fetch('http://localhost:8000/api/v1/schema/topology/swarm');
+        const response = await fetch(`http://localhost:${port}/api/v1/schema/topology/swarm`);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -21,13 +22,14 @@ export async function fetchTopologySchema(): Promise<string | null> {
 }
 
 export async function executeSandbox(toolName: string, intent: any): Promise<SandboxReceipt> {
+    const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
     try {
         const payload = {
             intent: intent.intent,
             state: intent.state
         };
 
-        const response = await fetch('http://localhost:8000/api/v1/sandbox/execute', {
+        const response = await fetch(`http://localhost:${port}/api/v1/sandbox/execute`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -55,12 +57,13 @@ export async function executeSandbox(toolName: string, intent: any): Promise<San
 }
 
 export async function resumeOracleWorkflow(workflowId: string, correctedIntent: string): Promise<boolean> {
+    const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
     try {
         const payload = {
             corrected_intent: JSON.parse(correctedIntent)
         };
 
-        const response = await fetch(`http://localhost:8000/api/v1/oracle/resume/${workflowId}`, {
+        const response = await fetch(`http://localhost:${port}/api/v1/oracle/resume/${workflowId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

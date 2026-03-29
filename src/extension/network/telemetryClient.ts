@@ -1,25 +1,27 @@
 import * as http from 'http';
+import { EventEmitter } from 'events';
+import * as vscode from 'vscode';
+import { resumeOracleWorkflow } from './edgeClient';
 
-type AgentSuspendedCallback = (workflowId: string, latentState: any, intent: any) => void;
-
-export class TelemetryClient {
-    private url = 'http://localhost:8000/api/v1/telemetry/stream';
-    private onAgentSuspended?: AgentSuspendedCallback;
+export class TelemetryClient extends EventEmitter {
     private retryCount = 0;
     private maxRetries = 10;
     private baseRetryDelayMs = 1000;
     private isConnected = false;
 
-    constructor(onAgentSuspended?: AgentSuspendedCallback) {
-        this.onAgentSuspended = onAgentSuspended;
+    constructor() {
+        super();
     }
 
     public connect() {
         if (this.isConnected) return;
 
-        console.log(`[TelemetryClient] Connecting to SSE stream at ${this.url}...`);
+        const port = vscode.workspace.getConfiguration('coreason.telemetry').get<number>('meshPort') || 8000;
+        const url = `http://localhost:${port}/api/v1/telemetry/stream`;
 
-        const request = http.get(this.url, (res) => {
+        console.log(`[TelemetryClient] Connecting to SSE stream at ${url}...`);
+
+        const request = http.get(url, (res) => {
             if (res.statusCode !== 200) {
                 console.error(`[TelemetryClient] Failed to connect, status code: ${res.statusCode}`);
                 this.scheduleReconnect();
@@ -87,14 +89,23 @@ export class TelemetryClient {
         }
 
         if (event.event_type === 'AgentSuspendedEvent') {
-            if (this.onAgentSuspended) {
-                const workflowId = event.workflow_id;
-                const latentState = event.latent_state;
-                const intent = event.failed_intent || event.intent; // Handle both possibilities based on prompt language
+            const workflowId = event.workflow_id;
+            const latentState = event.latent_state;
+            const intent = event.failed_intent || event.intent; // Handle both possibilities based on prompt language
 
-                console.log(`[TelemetryClient] Trap triggered! Agent suspended for workflow ${workflowId}.`);
-                this.onAgentSuspended(workflowId, latentState, intent);
-            }
+            console.log(`[TelemetryClient] Trap triggered! Agent suspended for workflow ${workflowId}.`);
+            this.emit('agent_suspended', workflowId, latentState, intent);
+        }
+
+        if (event.event_type === 'AgentResumedEvent') {
+            this.emit('agent_resumed', event.workflow_id);
+        }
+    }
+
+    public async resumeWorkflow(workflowId: string, correctedIntent: any): Promise<void> {
+        const success = await resumeOracleWorkflow(workflowId, JSON.stringify(correctedIntent));
+        if (success) {
+            this.emit('agent_resumed', workflowId);
         }
     }
 
