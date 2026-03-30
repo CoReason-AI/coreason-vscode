@@ -55,6 +55,12 @@ When binding to the backend Server-Sent Events (SSE) broker (`/api/v1/telemetry/
 * **Formatting:** Code must be formatted using Prettier/ESLint rules defined in the workspace.
 * **Error Handling:** Never swallow errors. If the runtime API is unreachable, display a native `vscode.window.showErrorMessage` with actionable recovery steps.
 
+### E. NP-Hard Computations & Canvas Physics
+The TDA Canvas (`TDACanvas.tsx`) utilizes the Eclipse Layout Kernel (`elkjs`) to calculate orthogonal routing for Directed Cyclic Graphs (DCGs). This is an NP-Hard mathematical operation.
+* **WARNING:** You are **STRICTLY FORBIDDEN** from importing `elkjs` directly into the main React thread.
+* **The WebWorker Mandate:** All layout mathematics MUST be offloaded to a Web Worker.
+* **The Blob-Inline Rule (ADR 0001):** Because of VS Code's strict `vscode-webview://` protocol restrictions, standard Web Workers will silently fail to load. You MUST instantiate the worker using Vite's blob-inlining strategy: `import ElkWorker from '../workers/elkWorker.ts?worker&inline';`. Attempting to refactor this into a standard import is a critical system failure.
+
 ## 5. Repository Topography
 When navigating the workspace, respect this separation of concerns:
 

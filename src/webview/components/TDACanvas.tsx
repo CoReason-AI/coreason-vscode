@@ -4,8 +4,7 @@ import { ReactFlow, Controls, Background, Node, Edge, Panel, applyNodeChanges, a
 import '@xyflow/react/dist/style.css';
 import { AgentNode } from './AgentNode';
 import YAML from 'yaml';
-// @ts-ignore
-import ELK from 'elkjs/lib/elk.bundled.js';
+import ElkWorker from '../workers/elkWorker.ts?worker&inline';
 
 import { vscodeApi } from '../vscodeApi';
 
@@ -19,7 +18,7 @@ export const TDACanvas = () => {
     }]);
     const [edges, setEdges] = useState<Edge[]>([]);
 
-    const elk = useMemo(() => new ELK(), []);
+    const worker = useMemo(() => new ElkWorker(), []);
     const nodeTypes = useMemo(() => ({ agent: AgentNode }), []);
 
     const onNodesChange = useCallback((changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
@@ -48,66 +47,31 @@ export const TDACanvas = () => {
         const handleMessage = async (event: MessageEvent) => {
             const message = event.data;
             if (message.type === 'YAML_UPDATE') {
-                try {
-                    const yamlString = message.payload;
-                    if (!yamlString) return;
-                    setRawDoc(yamlString);
-
-                    const yamlData = YAML.parse(yamlString);
-                    if (!yamlData || !yamlData.nodes) return;
-
-                    const elkNodes: any[] = [];
-                    const elkEdges: any[] = [];
-
-                    if (typeof yamlData.nodes === 'object') {
-                        for (const key of Object.keys(yamlData.nodes)) {
-                            elkNodes.push({ id: key, width: 250, height: 100 });
-                        }
-                    }
-
-                    if (Array.isArray(yamlData.edges)) {
-                        yamlData.edges.forEach((edge: any, index: number) => {
-                            if (Array.isArray(edge) && edge.length >= 2) {
-                                elkEdges.push({ id: `e-${index}`, sources: [edge[0]], targets: [edge[1]] });
-                            } else if (edge.source && edge.target) {
-                                elkEdges.push({ id: edge.id || `e-${index}`, sources: [edge.source], targets: [edge.target] });
-                            }
-                        });
-                    }
-
-                    const graph = {
-                        id: 'root',
-                        layoutOptions: { 'elk.algorithm': 'layered', 'elk.direction': 'RIGHT' },
-                        children: elkNodes,
-                        edges: elkEdges,
-                    };
-
-                    const layoutedGraph = await elk.layout(graph);
-
-                    const reactFlowNodes = (layoutedGraph.children || []).map((node: any) => ({
-                        id: node.id,
-                        position: { x: node.x || 0, y: node.y || 0 },
-                        data: { label: node.id },
-                        type: 'agent',
-                    }));
-
-                    const reactFlowEdges = (layoutedGraph.edges || []).map((edge: any) => ({
-                        id: edge.id,
-                        source: edge.sources[0],
-                        target: edge.targets[0],
-                    }));
-
-                    setNodes(reactFlowNodes);
-                    setEdges(reactFlowEdges);
-                } catch (e: any) {
-                    console.error("Main Thread ELK Error:", e);
-                    setNodes([{ id: 'error', position: {x:50, y:50}, data: {label: `ELK Error: ${e.message}`}, type: 'agent' }]);
-                }
+                if (!message.payload) return;
+                setRawDoc(message.payload);
+                worker.postMessage(message.payload);
             }
         };
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
-    }, [elk]);
+    }, [worker]);
+
+    useEffect(() => {
+        worker.onmessage = (event: MessageEvent) => {
+            if (event.data.type === 'LAYOUT_COMPLETE') {
+                setNodes(event.data.nodes);
+                setEdges(event.data.edges);
+            } else if (event.data.type === 'ERROR') {
+                console.error("ELK Layout Error:", event.data.message);
+                setNodes([{
+                    id: 'error',
+                    position: {x: 50, y: 50},
+                    data: {label: `ELK Error: ${event.data.message}`},
+                    type: 'agent'
+                }]);
+            }
+        };
+    }, [worker]);
 
     return (
         <div style={{ width: '100vw', height: '100vh' }}>
