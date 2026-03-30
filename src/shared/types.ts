@@ -41,7 +41,8 @@ export type WebviewMessage =
   | { type: 'RESOLVE'; payload: { workflowId: string; correctedIntent: any } }
   | { type: 'FETCH_CAPABILITIES' }
   | { type: 'CAPABILITIES_FETCHED'; payload: any }
-  | { type: 'CAPABILITIES_FETCHED_ERROR'; payload: any };
+  | { type: 'CAPABILITIES_FETCHED_ERROR'; payload: any }
+  | { type: 'WRITE_DOCUMENT'; payload: string };
 
 export type ExtensionMessage =
   | { type: 'REQUEST_SCHEMA' }
