@@ -6,35 +6,18 @@ let outputChannel: vscode.OutputChannel | undefined;
 export async function fetchTopologySchema(): Promise<string | null> {
     const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
     try {
-        const [swarmRes, dagRes] = await Promise.all([
-            fetch(`http://localhost:${port}/api/v1/schema/topology/swarm`),
-            fetch(`http://localhost:${port}/api/v1/schema/topology/dag`)
-        ]);
-        
-        if (!swarmRes.ok || !dagRes.ok) {
-            throw new Error(`HTTP error! statuses: swarm=${swarmRes.status}, dag=${dagRes.status}`);
+        // Fetch the WorkflowManifest schema — the root-level envelope that contains
+        // manifest_version, tenant_id, session_id, genesis_provenance, AND the
+        // AnyTopologyManifest discriminated union (dag/swarm) in its $defs.
+        // Using this as the root fixes VS Code errors on top-level WorkflowManifest fields.
+        const workflowRes = await fetch(`http://localhost:${port}/api/v1/schema/topology/workflow`);
+
+        if (!workflowRes.ok) {
+            throw new Error(`HTTP error! status: ${workflowRes.status}`);
         }
-        
-        const swarmSchema = await swarmRes.json();
-        const dagSchema = await dagRes.json();
 
-        // Merge $defs (or definitions) from both schemas into the root so $refs can resolve
-        const defs = {
-            ...(swarmSchema.$defs || {}),
-            ...(dagSchema.$defs || {})
-        };
-
-        const combined = {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "title": "CoReason Topology Manifest",
-            "$defs": defs,
-            "anyOf": [
-                { "$ref": swarmSchema.$ref },
-                { "$ref": dagSchema.$ref }
-            ]
-        };
-        
-        return JSON.stringify(combined);
+        const workflowSchema = await workflowRes.json();
+        return JSON.stringify(workflowSchema);
     } catch (error) {
         // Create or reuse an output channel
         if (!outputChannel) {

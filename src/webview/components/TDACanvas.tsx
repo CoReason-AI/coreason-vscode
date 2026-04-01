@@ -30,9 +30,11 @@ export const TDACanvas = () => {
         
         try {
             const yamlData = YAML.parse(rawDoc);
-            if (!yamlData.edges) yamlData.edges = [];
+            // Support WorkflowManifest (edges under topology) and flat topology docs
+            const topologyTarget = yamlData?.topology ?? yamlData;
+            if (!topologyTarget.edges) topologyTarget.edges = [];
             
-            yamlData.edges.push([connection.source, connection.target]);
+            topologyTarget.edges.push([connection.source, connection.target]);
             
             const isJson = rawDoc.trim().startsWith('{');
             const newDoc = isJson ? JSON.stringify(yamlData, null, 2) : YAML.stringify(yamlData);

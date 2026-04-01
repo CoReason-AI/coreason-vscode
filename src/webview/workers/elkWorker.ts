@@ -25,8 +25,16 @@ self.onmessage = async (event: MessageEvent) => {
         const yamlString = event.data;
         if (!yamlString) return;
 
-        const yamlData = YAML.parse(yamlString);
+        const parsedDoc = YAML.parse(yamlString);
+        console.log("ELK Worker: Parsed full document:", parsedDoc);
+        
+        // Support both a full WorkflowManifest (topology nested under 'topology' key)
+        // and a flat topology-only document for backward compatibility.
+        const yamlData = parsedDoc?.topology ?? parsedDoc;
+        console.log("ELK Worker: Extracted topology target:", yamlData);
+
         if (!yamlData || !yamlData.nodes) {
+            console.log("ELK Worker: yamlData.nodes is empty or undefined. Aborting layout.");
             return;
         }
 
