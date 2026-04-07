@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { CoreasonSchemaProvider } from './providers/schemaProvider';
-import { fetchTopologySchema } from './network/edgeClient';
+import { fetchTopologySchema, synthesizeAgent } from './network/edgeClient';
 import { ManifoldPanel } from './panels/ManifoldPanel';
 import { ForgePanel } from './panels/ForgePanel';
 import { OraclePanel } from './panels/OraclePanel';
@@ -172,6 +172,31 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(newSwarmDisposable);
+
+    const synthesizeDisposable = vscode.commands.registerCommand('coreason.synthesizeIntent', async () => {
+        const prompt = await vscode.window.showInputBox({ 
+            prompt: "Enter your intent to rigorosly synthesize a new agent framework:",
+            placeHolder: "e.g., Build an agent that fetches live stock market sentiment"
+        });
+
+        if (!prompt) return;
+
+        vscode.window.showInformationMessage('Synthesizing zero-day Agent on the Epistemic Edge. Check your backend terminal!');
+        
+        try {
+            const data = await synthesizeAgent(prompt);
+            
+            if (data) {
+                vscode.window.showInformationMessage(`Compilation complete! Native Workflow [${data.workflow_id}] registered as ${data.manifest_type}.`);
+            } else {
+                vscode.window.showErrorMessage(`Synthesis failed. Please check the CoReason Engine backend logs.`);
+            }
+        } catch(e: any) {
+            vscode.window.showErrorMessage(`System failure during synthesis request: ${e.message}`);
+        }
+    });
+
+    context.subscriptions.push(synthesizeDisposable);
 
     let outputChannel: vscode.OutputChannel | undefined;
 

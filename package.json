@@ -33,6 +33,11 @@
         "command": "coreason.runSwarm",
         "title": "CoReason: Run Swarm Manifest",
         "icon": "$(play)"
+      },
+      {
+        "command": "coreason.synthesizeIntent",
+        "title": "CoReason: Synthesize Agent from Text",
+        "icon": "$(sparkle)"
       }
     ],
     "menus": {
