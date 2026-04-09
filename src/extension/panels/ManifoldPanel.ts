@@ -93,10 +93,12 @@ export class ManifoldPanel {
             if (message.type === 'REQUEST_SYNTHESIS') {
                 const currentUri = this.currentUri;
                 if (!currentUri) {
+                    vscode.window.showErrorMessage('CoReason Synthesis aborted: No YAML file is linked to this TDA Canvas. Open a topology YAML file first.');
                     return;
                 }
                 const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === currentUri.toString());
                 if (!doc) {
+                    vscode.window.showErrorMessage('CoReason Synthesis aborted: The linked YAML file is no longer open in the editor.');
                     return;
                 }
 

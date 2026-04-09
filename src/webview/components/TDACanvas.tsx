@@ -142,8 +142,20 @@ export const TDACanvas = () => {
                 fitView 
                 colorMode="dark"
             >
-                <Panel position="top-right">
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                <Panel position="bottom-center">
+                    <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'row', 
+                        gap: '8px', 
+                        alignItems: 'center', 
+                        background: 'var(--vscode-input-background)',
+                        padding: '8px 16px', 
+                        borderRadius: '24px', 
+                        border: '1px solid var(--vscode-widget-border, #444)', 
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        width: '600px',
+                        marginBottom: '24px'
+                    }}>
                         <textarea 
                             placeholder="Prompt: Build a multi-agent scraping swarm..." 
                             value={userPrompt}
@@ -154,16 +166,19 @@ export const TDACanvas = () => {
                                     handleSynthesize();
                                 }
                             }}
+                            rows={1}
                             style={{
+                                flex: 1,
                                 padding: '8px',
-                                borderRadius: '4px',
-                                border: '1px solid var(--vscode-input-border)',
-                                background: 'var(--vscode-input-background)',
+                                border: 'none',
+                                background: 'transparent',
                                 color: 'var(--vscode-input-foreground)',
-                                width: '250px',
-                                minHeight: '70px',
+                                minHeight: '24px',
+                                maxHeight: '100px',
                                 fontFamily: 'inherit',
-                                resize: 'vertical'
+                                resize: 'none',
+                                outline: 'none',
+                                overflowY: 'auto'
                             }}
                         />
                         <button
@@ -173,15 +188,17 @@ export const TDACanvas = () => {
                                 background: 'var(--vscode-button-background)',
                                 color: 'var(--vscode-button-foreground)',
                                 border: 'none',
-                                padding: '8px 12px',
+                                padding: '8px 16px',
                                 cursor: isSynthesizing ? 'wait' : 'pointer',
                                 fontWeight: 'bold',
-                                borderRadius: '4px',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                opacity: isSynthesizing ? 0.7 : 1
+                                borderRadius: '18px',
+                                opacity: isSynthesizing ? 0.7 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
                             }}
                         >
-                            {isSynthesizing ? '⏳ Synthesizing...' : '✨ Synthesize Next Agent'}
+                            {isSynthesizing ? '⏳' : '✨ Generate'}
                         </button>
                     </div>
                 </Panel>

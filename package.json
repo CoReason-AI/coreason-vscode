@@ -38,6 +38,11 @@
         "command": "coreason.synthesizeIntent",
         "title": "CoReason: Synthesize Agent from Text",
         "icon": "$(sparkle)"
+      },
+      {
+        "command": "coreason.refreshSchema",
+        "title": "CoReason: Refresh Active Schema Cache",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {

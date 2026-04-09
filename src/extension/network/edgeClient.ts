@@ -101,12 +101,12 @@ export async function synthesizeAgent(prompt: string): Promise<any> {
     const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
     try {
         const payload = {
-            human_directive_intent: prompt,
+            user_prompt: prompt,
             topological_manifold_bias: null,
             max_agents: 3
         };
 
-        const response = await fetch(`http://localhost:${port}/api/v1/predict/synthesize`, {
+        const response = await fetch(`http://localhost:${port}/api/v1/predict/topology`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

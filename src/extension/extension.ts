@@ -12,9 +12,16 @@ export function activate(context: vscode.ExtensionContext) {
     console.log('CoReason Projection Manifold activated.');
 
     // Register the schema provider
+    const schemaProvider = new CoreasonSchemaProvider();
     context.subscriptions.push(
-        vscode.workspace.registerTextDocumentContentProvider('coreason-schema', new CoreasonSchemaProvider())
+        vscode.workspace.registerTextDocumentContentProvider('coreason-schema', schemaProvider)
     );
+
+    // Provide a way to manually flush the VS Code JSON schema cache
+    context.subscriptions.push(vscode.commands.registerCommand('coreason.refreshSchema', () => {
+        schemaProvider.onDidChangeEmitter.fire(vscode.Uri.parse('coreason-schema://schemas/swarm.json'));
+        vscode.window.showInformationMessage('CoReason: Dynamic Ontology Schema fully re-synced from Backend.');
+    }));
 
     // Hijack YAML extension schemas
     try {
