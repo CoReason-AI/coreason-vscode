@@ -13,6 +13,7 @@ export const TDACanvas = () => {
     const [userPrompt, setUserPrompt] = useState<string>('');
     const [isSynthesizing, setIsSynthesizing] = useState<boolean>(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [ghostCursor, setGhostCursor] = useState<{x: number, y: number} | null>(null);
     const [nodes, setNodes] = useState<Node[]>([{
         id: 'debug-init',
         position: { x: 50, y: 50 },
@@ -116,6 +117,18 @@ export const TDACanvas = () => {
                 }
             } else if (message.type === 'SYNTHESIS_STATUS') {
                 setToastMessage(message.payload);
+            } else if (message.type === 'TAXONOMIC_RESTRUCTURE') {
+                setToastMessage(`Restructuring Workspace UI applying topology heuristic: ${message.payload.heuristic}`);
+                setTimeout(() => setToastMessage(null), 3000);
+                worker.postMessage(rawDoc); 
+            } else if (message.type === 'SPATIAL_KINEMATIC') {
+                const targetCoordinate = message.payload.target_coordinate || message.payload.terminal_coordinate;
+                if (targetCoordinate) {
+                    setGhostCursor({ x: targetCoordinate.x, y: targetCoordinate.y });
+                    setTimeout(() => setGhostCursor(null), message.payload.trajectory_duration_ms || 1000);
+                }
+                setToastMessage(`Spatial Kinematic Execution mapping boundary: [${message.payload.action_class || message.payload.action}]`);
+                setTimeout(() => setToastMessage(null), 3000);
             }
         };
         window.addEventListener('message', handleMessage);
@@ -140,7 +153,23 @@ export const TDACanvas = () => {
     }, [worker]);
 
     return (
-        <div style={{ width: '100vw', height: '100vh' }}>
+        <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+            {ghostCursor && (
+                <div style={{
+                    position: 'absolute',
+                    left: ghostCursor.x,
+                    top: ghostCursor.y,
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(255, 100, 100, 0.8)',
+                    border: '2px solid white',
+                    boxShadow: '0 0 10px rgba(255,100,100,0.5)',
+                    zIndex: 9999,
+                    pointerEvents: 'none',
+                    transition: 'all 0.3s ease'
+                }} />
+            )}
             <ReactFlow
                 nodes={nodes}
                 edges={edges}

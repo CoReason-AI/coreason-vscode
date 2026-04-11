@@ -215,6 +215,15 @@ export class ManifoldPanel {
         this.panel.webview.postMessage(message);
     }
 
+    public handleTelemetryEvent(eventType: string, payload: any) {
+        // AGENT INSTRUCTION: Inject semantic and kinetic event arrays dynamically formatting telemetry mapping limits
+        if (eventType === 'taxonomic_restructure_event' || eventType === 'taxonomic_restructure') {
+            this.panel.webview.postMessage({ type: 'TAXONOMIC_RESTRUCTURE', payload });
+        } else if (eventType === 'spatial_kinematic_event' || eventType === 'spatial_kinematic') {
+            this.panel.webview.postMessage({ type: 'SPATIAL_KINEMATIC', payload });
+        }
+    }
+
     private update() {
         const webview = this.panel.webview;
         this.panel.webview.html = this.getHtmlForWebview(webview);
