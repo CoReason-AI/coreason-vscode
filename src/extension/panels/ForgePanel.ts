@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { WebviewMessage } from '../../shared/types';
-import { executeSandbox, resumeOracleWorkflow } from '../network/edgeClient';
+import { executeSandbox, resumeOracleWorkflow, sendForgeApprovalAttestation } from '../network/edgeClient';
 
 export class ForgePanel {
     public static currentPanel: ForgePanel | undefined;
@@ -68,6 +68,13 @@ export class ForgePanel {
                     vscode.window.showInformationMessage('✨ Epistemic Injection successful. Swarm thread resumed.');
                 } else {
                     vscode.window.showErrorMessage('Failed to inject Epistemic Correction.');
+                }
+            } else if (message.type === 'APPROVE_FORGE') {
+                const success = await sendForgeApprovalAttestation(message.payload.workflowId, message.payload.attestation);
+                if (success) {
+                    vscode.window.showInformationMessage('🔐 FIDO2 WebAuthn intent approved. Sandbox proceeding.');
+                } else {
+                    vscode.window.showErrorMessage('FIDO2 approval rejected or failed to transmit.');
                 }
             }
         }, null, this.disposables);

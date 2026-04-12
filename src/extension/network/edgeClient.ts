@@ -96,3 +96,64 @@ export async function resumeOracleWorkflow(workflowId: string, correctedIntent: 
         return false;
     }
 }
+
+export async function synthesizeAgent(prompt: string): Promise<any> {
+    const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
+    try {
+        const payload = {
+            user_prompt: prompt,
+            topological_manifold_bias: null,
+            max_agents: 3
+        };
+
+        const response = await fetch(`http://localhost:${port}/api/v1/predict/topology`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error: any) {
+        if (!outputChannel) {
+            outputChannel = vscode.window.createOutputChannel('CoReason');
+        }
+        outputChannel.appendLine(`[Error] Failed to synthesize agent: ${error}`);
+        return null;
+    }
+}
+
+export async function sendForgeApprovalAttestation(workflowId: string, attestation: string): Promise<boolean> {
+    const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
+    try {
+        const payload = {
+            attestation: attestation
+        };
+
+        const response = await fetch(`http://localhost:${port}/api/v1/sandbox/approve/${workflowId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return true;
+    } catch (error: any) {
+        if (!outputChannel) {
+            outputChannel = vscode.window.createOutputChannel('CoReason');
+        }
+        outputChannel.appendLine(`[Error] Failed to send FIDO2 attestation for workflow ${workflowId} to Epistemic Edge: ${error}`);
+        return false;
+    }
+}

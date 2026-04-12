@@ -7,11 +7,30 @@ export const OracleResolver = () => {
     const [status, setStatus] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const [schemaFields, setSchemaFields] = useState<any>(null);
+    const [yieldType, setYieldType] = useState<string>('AgentResponse');
+
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message && message.type === 'SET_ORACLE_WORKFLOW') {
                 setWorkflowId(message.payload);
+            } else if (message && message.type === 'AGENT_SUSPENDED') {
+                setWorkflowId(message.payload.workflowId);
+                const intent = message.payload.intent;
+                if (intent && intent.domain_extensions && intent.domain_extensions.VerificationYield) {
+                    setYieldType('VerificationYield');
+                    setSchemaFields(intent.domain_extensions.VerificationYield);
+                    setResolutionData(JSON.stringify({
+                        success: true,
+                        justification: ""
+                    }, null, 2));
+                    setStatus("VerificationYield boundary identified.");
+                } else {
+                    setYieldType('AgentResponse');
+                    setSchemaFields(null);
+                    setResolutionData('{\n  "decision": "approve"\n}');
+                }
             }
         };
 
@@ -92,7 +111,19 @@ export const OracleResolver = () => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '0.9em', fontWeight: 'bold' }}>Resolution Payload (JSON)</label>
+                    <label style={{ fontSize: '0.9em', fontWeight: 'bold' }}>
+                        {yieldType === 'VerificationYield' ? 'Verification Yield Payload (JSON)' : 'Resolution Payload (JSON)'}
+                    </label>
+                    {schemaFields && (
+                        <div style={{ padding: '10px', background: 'var(--vscode-editorWidget-background)', border: '1px solid var(--vscode-widget-border)', borderRadius: '2px', marginBottom: '10px', fontSize: '0.85em' }}>
+                            <strong>Dynamically Mapped Expected Schema:</strong>
+                            <ul style={{ margin: '5px 0 0 0', paddingLeft: '20px' }}>
+                                {Object.entries(schemaFields).map(([key, desc]) => (
+                                    <li key={key}><code>{key}</code>: {desc as string}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <textarea
                         value={resolutionData}
                         onChange={(e) => setResolutionData(e.target.value)}

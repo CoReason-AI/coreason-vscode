@@ -182,20 +182,41 @@ export const CapabilityForge = () => {
                 </div>
 
                 {isAgentDriving ? (
-                    <button
-                        onClick={handleOracleOverride}
-                        style={{
-                            padding: '10px',
-                            background: 'var(--vscode-errorForeground)',
-                            color: 'var(--vscode-button-foreground)',
-                            border: 'none',
-                            borderRadius: '2px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold'
-                        }}
-                    >
-                        Override & Execute
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                            onClick={handleOracleOverride}
+                            style={{
+                                padding: '10px',
+                                background: 'var(--vscode-errorForeground)',
+                                color: 'var(--vscode-button-foreground)',
+                                border: 'none',
+                                borderRadius: '2px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                flexGrow: 1
+                            }}
+                        >
+                            Override & Execute
+                        </button>
+                        <button
+                            onClick={() => {
+                                vscodeApi.postMessage({ type: 'APPROVE_FORGE', payload: { workflowId: currentWorkflowId, attestation: "fido2_webauthn" } });
+                                setIsAgentDriving(false);
+                            }}
+                            style={{
+                                padding: '10px',
+                                background: 'var(--vscode-button-background)',
+                                color: 'var(--vscode-button-foreground)',
+                                border: 'none',
+                                borderRadius: '2px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                flexGrow: 1
+                            }}
+                        >
+                            <span style={{ marginRight: '5px' }}>🔐</span> Approve (FIDO2)
+                        </button>
+                    </div>
                 ) : (
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <button
