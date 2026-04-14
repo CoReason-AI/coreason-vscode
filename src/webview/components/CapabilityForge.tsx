@@ -3,16 +3,34 @@ import React, { useState, useEffect } from 'react';
 import { vscodeApi } from '../vscodeApi';
 import { SandboxReceipt } from '../../shared/types';
 
+interface ASTGradientReceipt {
+    diagnostic_message: string;
+    ast_node_pointer: string;
+    loss_vector?: number[];
+    stage?: string;
+}
+
+interface ForgePipelineStage {
+    name: string;
+    status: 'idle' | 'running' | 'passed' | 'failed';
+}
+
 export const CapabilityForge = () => {
     const [capabilities, setCapabilities] = useState<string[]>([]);
     const [selectedTool, setSelectedTool] = useState<string>('');
     const [intentJson, setIntentJson] = useState<string>('{\n  "arguments": {}\n}');
     const [latentState, setLatentState] = useState<string>('{\n  "workflowId": "mock-123"\n}');
     const [receipt, setReceipt] = useState<SandboxReceipt | null>(null);
-    const [activeTab, setActiveTab] = useState<'output' | 'stdout' | 'physics'>('output');
+    const [activeTab, setActiveTab] = useState<'output' | 'stdout' | 'physics' | 'ast'>('output');
     const [isLoading, setIsLoading] = useState(false);
     const [isAgentDriving, setIsAgentDriving] = useState(false);
     const [currentWorkflowId, setCurrentWorkflowId] = useState<string>('');
+    const [astGradient, setAstGradient] = useState<ASTGradientReceipt | null>(null);
+    const [pipeline, setPipeline] = useState<ForgePipelineStage[]>([
+        { name: 'Generate', status: 'idle' },
+        { name: 'Verify', status: 'idle' },
+        { name: 'Fuzz', status: 'idle' },
+    ]);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -41,6 +59,28 @@ export const CapabilityForge = () => {
                 setCapabilities(caps);
                 if (caps.length > 0) {
                     setSelectedTool(caps[0]);
+                }
+            } else if (message && message.type === 'MCP_UI_INTENT') {
+                // Handle ASTGradientReceipt from MCPClientIntent
+                const intent = message.payload;
+                if (intent?.params?.holographic_projection) {
+                    for (const panel of intent.params.holographic_projection) {
+                        if (panel.panel_type === 'GrammarPanelProfile' && panel.chart_data) {
+                            setAstGradient({
+                                diagnostic_message: panel.chart_data.diagnostic_message || 'Compilation failure detected',
+                                ast_node_pointer: panel.chart_data.ast_node_pointer || 'unknown',
+                                loss_vector: panel.chart_data.data_points,
+                                stage: panel.chart_data.stage || 'Verify',
+                            });
+                            setActiveTab('ast');
+                            // Update pipeline stage
+                            setPipeline(prev => prev.map(s =>
+                                s.name === (panel.chart_data.stage || 'Verify')
+                                    ? { ...s, status: 'failed' }
+                                    : s
+                            ));
+                        }
+                    }
                 }
             } else if (message && message.type === 'CAPABILITIES_FETCHED_ERROR') {
                 console.error("Failed to fetch capabilities:", message.payload);
@@ -262,8 +302,29 @@ export const CapabilityForge = () => {
                     Execution Receipt
                 </h2>
 
+                {/* Tripartite Pipeline: Generate → Verify → Fuzz */}
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '10px', padding: '8px', background: 'var(--vscode-editorWidget-background)', borderRadius: '4px' }}>
+                    {pipeline.map((stage, idx) => (
+                        <div key={stage.name} style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
+                            <div style={{
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                fontSize: '0.85em',
+                                fontWeight: 'bold',
+                                textAlign: 'center',
+                                flex: 1,
+                                background: stage.status === 'passed' ? '#2ea04370' : stage.status === 'failed' ? '#f8514970' : stage.status === 'running' ? '#d29922' : 'var(--vscode-button-secondaryBackground)',
+                                color: stage.status === 'idle' ? 'var(--vscode-button-secondaryForeground)' : 'white',
+                            }}>
+                                {stage.status === 'running' ? '⏳' : stage.status === 'passed' ? '✅' : stage.status === 'failed' ? '❌' : '○'} {stage.name}
+                            </div>
+                            {idx < pipeline.length - 1 && <span style={{ color: 'var(--vscode-descriptionForeground)' }}>→</span>}
+                        </div>
+                    ))}
+                </div>
+
                 <div style={{ display: 'flex', gap: '10px', borderBottom: '1px solid var(--vscode-panel-border)', paddingBottom: '5px' }}>
-                    {(['output', 'stdout', 'physics'] as const).map((tab) => (
+                    {(['output', 'stdout', 'physics', 'ast'] as const).map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -278,7 +339,7 @@ export const CapabilityForge = () => {
                                 fontWeight: activeTab === tab ? 'bold' : 'normal'
                             }}
                         >
-                            {tab === 'output' ? 'Output' : tab === 'stdout' ? 'StdOut / StdErr' : 'Physics'}
+                            {tab === 'output' ? 'Output' : tab === 'stdout' ? 'StdOut / StdErr' : tab === 'physics' ? 'Physics' : 'AST Gradient'}
                         </button>
                     ))}
                 </div>
@@ -334,6 +395,41 @@ export const CapabilityForge = () => {
                             }}>
                                 <strong>Peak Memory:</strong> {(receipt.telemetry.peak_memory_bytes / 1_048_576).toFixed(2)} MB
                             </div>
+                        </div>
+                    )}
+                    {activeTab === 'ast' && astGradient && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div style={{ color: 'var(--vscode-errorForeground)', fontWeight: 'bold' }}>
+                                ❌ AST Gradient Failure
+                            </div>
+                            <div>
+                                <strong>Diagnostic:</strong> {astGradient.diagnostic_message}
+                            </div>
+                            <div>
+                                <strong>AST Node Pointer:</strong>{' '}
+                                <code style={{ background: 'var(--vscode-textCodeBlock-background)', padding: '2px 6px', borderRadius: '3px' }}>
+                                    {astGradient.ast_node_pointer}
+                                </code>
+                            </div>
+                            {astGradient.loss_vector && (
+                                <div>
+                                    <strong>Loss Vector:</strong>
+                                    <div style={{ display: 'flex', gap: '4px', marginTop: '4px', alignItems: 'flex-end', height: '60px' }}>
+                                        {astGradient.loss_vector.map((v, i) => (
+                                            <div
+                                                key={i}
+                                                style={{
+                                                    width: '12px',
+                                                    height: `${Math.min(100, v * 100)}%`,
+                                                    background: v > 0.7 ? 'var(--vscode-errorForeground)' : v > 0.4 ? 'var(--vscode-charts-orange)' : 'var(--vscode-charts-green)',
+                                                    borderRadius: '2px',
+                                                }}
+                                                title={`Step ${i}: ${v.toFixed(3)}`}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

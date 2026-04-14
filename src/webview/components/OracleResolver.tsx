@@ -9,6 +9,7 @@ export const OracleResolver = () => {
 
     const [schemaFields, setSchemaFields] = useState<any>(null);
     const [yieldType, setYieldType] = useState<string>('AgentResponse');
+    const [insightPanels, setInsightPanels] = useState<any[]>([]);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -31,6 +32,27 @@ export const OracleResolver = () => {
                     setSchemaFields(null);
                     setResolutionData('{\n  "decision": "approve"\n}');
                 }
+            } else if (message && message.type === 'MCP_UI_INTENT') {
+                // Handle MCPClientIntent from the telemetry bridge
+                const intent = message.payload;
+                if (intent?.params?.holographic_projection) {
+                    setInsightPanels(intent.params.holographic_projection);
+                }
+                // If intent contains a resolution_schema, dynamically build form fields
+                if (intent?.resolution_schema) {
+                    setSchemaFields(intent.resolution_schema);
+                    setYieldType(intent.intent_type || 'AdjudicationIntent');
+                    // Pre-populate with default values from schema
+                    const defaults: Record<string, any> = {};
+                    for (const [key, spec] of Object.entries(intent.resolution_schema as Record<string, any>)) {
+                        defaults[key] = spec?.default ?? '';
+                    }
+                    setResolutionData(JSON.stringify(defaults, null, 2));
+                    setStatus(`${intent.intent_type || 'Intent'} received — awaiting human resolution.`);
+                }
+                if (intent?.params?.holographic_projection?.length) {
+                    setWorkflowId(intent.workflow_id || workflowId);
+                }
             }
         };
 
@@ -48,8 +70,18 @@ export const OracleResolver = () => {
         setStatus('Submitting...');
         try {
             const parsedResolution = JSON.parse(resolutionData);
-            vscodeApi.postMessage({ type: 'SUBMIT', payload: { workflowId, correctedIntent: parsedResolution } });
-            setStatus('Success: Resolution submitted to host.');
+            // Emit InterventionReceipt back to extension host
+            vscodeApi.postMessage({
+                type: 'SUBMIT',
+                payload: {
+                    workflowId,
+                    correctedIntent: parsedResolution,
+                    receipt_type: 'InterventionReceipt',
+                    yield_type: yieldType,
+                }
+            });
+            setStatus('Success: InterventionReceipt submitted to host.');
+            setInsightPanels([]);
         } catch (error: any) {
             setStatus(`Error: ${error.message || String(error)}`);
         } finally {
@@ -89,6 +121,33 @@ export const OracleResolver = () => {
                 <h2 style={{ margin: 0, fontSize: '1.4em', borderBottom: '1px solid var(--vscode-panel-border)', paddingBottom: '10px', textAlign: 'center' }}>
                     Epistemic Oracle Resolution
                 </h2>
+
+                {/* Insight Card Panels from MCPClientIntent */}
+                {insightPanels.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {insightPanels.map((panel: any, idx: number) => (
+                            <div key={idx} style={{
+                                padding: '12px',
+                                background: 'var(--vscode-editorWidget-background)',
+                                border: `1px solid ${panel.severity === 'critical' ? 'var(--vscode-errorForeground)' : 'var(--vscode-widget-border)'}`,
+                                borderRadius: '4px',
+                                fontSize: '0.85em',
+                            }}>
+                                <strong>{panel.panel_type === 'InsightCardProfile' ? '🔥 Burn Card' : '📊 Grammar Panel'}</strong>
+                                {panel.markdown_body && (
+                                    <pre style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap', fontFamily: 'var(--vscode-editor-font-family), monospace' }}>
+                                        {panel.markdown_body}
+                                    </pre>
+                                )}
+                                {panel.chart_data && (
+                                    <div style={{ marginTop: '8px', color: 'var(--vscode-descriptionForeground)' }}>
+                                        Loss vectors: {JSON.stringify(panel.chart_data.data_points?.slice(0, 5))}…
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '0.9em', fontWeight: 'bold' }}>Workflow ID</label>

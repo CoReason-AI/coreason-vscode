@@ -98,6 +98,10 @@ export const TDACanvas = () => {
         }
     }, [rawDoc]);
 
+    // High-frequency ambient state stored in ref to avoid re-renders (SemanticZoomProfile)
+    const ambientRef = useRef<any>(null);
+    const [ambientDisplay, setAmbientDisplay] = useState<{ entropy: string; burnRate: string } | null>(null);
+
     useEffect(() => {
         const handleMessage = async (event: MessageEvent) => {
             const message = event.data;
@@ -129,11 +133,35 @@ export const TDACanvas = () => {
                 }
                 setToastMessage(`Spatial Kinematic Execution mapping boundary: [${message.payload.action_class || message.payload.action}]`);
                 setTimeout(() => setToastMessage(null), 3000);
+            } else if (message.type === 'AMBIENT_STATE') {
+                // Store in ref for high-frequency updates, throttle display to 2Hz
+                ambientRef.current = message.payload;
+            } else if (message.type === 'MANIFOLD_PROJECTION') {
+                // Re-trigger ELK layout with projected topology from runtime
+                const projection = message.payload;
+                if (projection?.topology) {
+                    worker.postMessage(JSON.stringify(projection.topology));
+                    setToastMessage('Live topology projection received');
+                    setTimeout(() => setToastMessage(null), 3000);
+                }
             }
         };
         window.addEventListener('message', handleMessage);
         return () => window.removeEventListener('message', handleMessage);
     }, [worker]);
+
+    // Throttled ambient state display at 2Hz
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (ambientRef.current) {
+                setAmbientDisplay({
+                    entropy: String(ambientRef.current.epistemic_entropy_score ?? '—'),
+                    burnRate: String(ambientRef.current.thermodynamic_burn_rate ?? '—'),
+                });
+            }
+        }, 500);
+        return () => clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         worker.onmessage = (event: MessageEvent) => {
@@ -306,6 +334,23 @@ export const TDACanvas = () => {
                         </div>
                     )}
                 </Panel>
+                {ambientDisplay && (
+                    <Panel position="bottom-left">
+                        <div style={{
+                            display: 'flex',
+                            gap: '12px',
+                            padding: '6px 12px',
+                            background: 'rgba(0,0,0,0.6)',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontFamily: 'var(--vscode-editor-font-family), monospace',
+                            color: '#ccc',
+                        }}>
+                            <span>🌡️ Entropy: <strong style={{ color: '#f0c674' }}>{ambientDisplay.entropy}</strong></span>
+                            <span>🔥 Burn: <strong style={{ color: '#f85149' }}>{ambientDisplay.burnRate}</strong></span>
+                        </div>
+                    </Panel>
+                )}
                 <Background />
                 <Controls />
             </ReactFlow>
