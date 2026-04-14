@@ -93,28 +93,38 @@ export class ManifoldPanel {
             if (message.type === 'REQUEST_SYNTHESIS') {
                 const currentUri = this.currentUri;
                 if (!currentUri) {
+                    vscode.window.showErrorMessage('CoReason Synthesis aborted: No YAML file is linked to this TDA Canvas. Open a topology YAML file first.');
                     return;
                 }
                 const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === currentUri.toString());
                 if (!doc) {
+                    vscode.window.showErrorMessage('CoReason Synthesis aborted: The linked YAML file is no longer open in the editor.');
                     return;
                 }
 
                 try {
+                    this.panel.webview.postMessage({ type: 'SYNTHESIS_STATUS', payload: '🚀 Igniting DeepInfra Inference Engine...' });
+                    
                     const currentYamlText = doc.getText();
                     const port = vscode.workspace.getConfiguration('coreason.telemetry').get('meshPort') || 8000;
+                    const userPrompt = message.payload?.user_prompt || "";
 
                     const response = await fetch(`http://localhost:${port}/api/v1/predict/topology`, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'text/plain'
+                            'Content-Type': 'application/json'
                         },
-                        body: currentYamlText
+                        body: JSON.stringify({
+                            topology: currentYamlText,
+                            user_prompt: userPrompt
+                        })
                     });
 
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
+                    
+                    this.panel.webview.postMessage({ type: 'SYNTHESIS_STATUS', payload: '✨ Synthesis Successful! Morphing document...' });
 
                     const newYamlText = await response.text();
 
@@ -167,7 +177,7 @@ export class ManifoldPanel {
                     }
 
                     if (hasConflict) {
-                        vscode.window.showWarningMessage('Synthesis aborted: Document was modified in the exact locations the LLM was targeting.');
+                        this.panel.webview.postMessage({ type: 'SYNTHESIS_ERROR', payload: '❌ Synthesis aborted: Document conflict.' });
                         return;
                     }
 
@@ -187,12 +197,12 @@ export class ManifoldPanel {
                             await vscode.workspace.applyEdit(edit);
                         } else if (patchedText === false) {
                             // If patch application failed, fallback to warning the user
-                            vscode.window.showWarningMessage('Synthesis aborted: Unable to cleanly merge changes into the modified document.');
+                            this.panel.webview.postMessage({ type: 'SYNTHESIS_ERROR', payload: '❌ Synthesis aborted: Clean merge failed.' });
                         }
                     }
                 } catch (error) {
                     console.error('Synthesis failed:', error);
-                    vscode.window.showErrorMessage('Synthesis Engine Offline');
+                    this.panel.webview.postMessage({ type: 'SYNTHESIS_ERROR', payload: '❌ Synthesis Engine Offline' });
                 }
             }
         }, null, this.disposables);
@@ -201,9 +211,17 @@ export class ManifoldPanel {
     public updateCanvas(document: vscode.TextDocument) {
         this.currentUri = document.uri;
         const text = document.getText();
-        vscode.window.showInformationMessage(`CoReason: Sending YAML_UPDATE payload to Canvas (length: ${text.length})`);
         const message: ExtensionMessage = { type: 'YAML_UPDATE', payload: text };
         this.panel.webview.postMessage(message);
+    }
+
+    public handleTelemetryEvent(eventType: string, payload: any) {
+        // AGENT INSTRUCTION: Inject semantic and kinetic event arrays dynamically formatting telemetry mapping limits
+        if (eventType === 'taxonomic_restructure_event' || eventType === 'taxonomic_restructure') {
+            this.panel.webview.postMessage({ type: 'TAXONOMIC_RESTRUCTURE', payload });
+        } else if (eventType === 'spatial_kinematic_event' || eventType === 'spatial_kinematic') {
+            this.panel.webview.postMessage({ type: 'SPATIAL_KINEMATIC', payload });
+        }
     }
 
     private update() {
