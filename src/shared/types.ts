@@ -51,7 +51,9 @@ export type ExtensionMessage =
   | { type: 'SET_AGENT_DRIVING'; payload: boolean }
   | { type: 'CAPABILITY_EXECUTED'; payload: SandboxReceipt }
   | { type: 'CAPABILITIES_FETCHED'; payload: any }
-  | { type: 'CAPABILITIES_FETCHED_ERROR'; payload: any };
+  | { type: 'CAPABILITIES_FETCHED_ERROR'; payload: any }
+  | { type: 'TAXONOMIC_RESTRUCTURE'; payload: any }
+  | { type: 'SPATIAL_KINEMATIC'; payload: any };
 
 export type WorkerMessage =
   | { type: 'LAYOUT_COMPLETE'; nodes: any[]; edges: any[] }

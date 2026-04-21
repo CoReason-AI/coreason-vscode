@@ -8,9 +8,17 @@ export class TelemetryClient extends EventEmitter {
     private maxRetries = 10;
     private baseRetryDelayMs = 1000;
     private isConnected = false;
+    private webview: vscode.Webview | null = null;
 
     constructor() {
         super();
+    }
+
+    /**
+     * Register a webview panel to receive dispatched telemetry messages.
+     */
+    public setWebview(webview: vscode.Webview) {
+        this.webview = webview;
     }
 
     public connect() {
@@ -80,8 +88,40 @@ export class TelemetryClient extends EventEmitter {
         request.end();
     }
 
+    private dispatchToWebview(type: string, payload: any) {
+        if (this.webview) {
+            this.webview.postMessage({ type, payload });
+        }
+    }
+
     private handleEvent(event: any) {
-        if (!event || !event.event_type) return;
+        if (!event) return;
+
+        // Route AmbientState telemetry to the webview for live dashboards
+        if (event.type === 'AmbientState') {
+            this.dispatchToWebview('AMBIENT_STATE', event.data);
+            this.emit('ambient_state', event.data);
+            return;
+        }
+
+        // Route MCPClientIntent to the webview for Oracle/Forge panels
+        if (event.type === 'MCPClientIntent') {
+            const intent = event.intent;
+            if (intent?.method === 'mcp.ui.emit_intent') {
+                this.dispatchToWebview('MCP_UI_INTENT', intent);
+                this.emit('mcp_ui_intent', intent);
+            }
+            return;
+        }
+
+        // Route DynamicManifoldProjectionManifest to the TDA Canvas
+        if (event.type === 'DynamicManifoldProjectionManifest') {
+            this.dispatchToWebview('MANIFOLD_PROJECTION', event);
+            this.emit('manifold_projection', event);
+            return;
+        }
+
+        if (!event.event_type) return;
 
         if (event.event_type === 'TokenStreamChunk' || event.event_type === 'NodeStartedEvent') {
             // Markov Filter: Drop noise
@@ -95,10 +135,12 @@ export class TelemetryClient extends EventEmitter {
 
             console.log(`[TelemetryClient] Trap triggered! Agent suspended for workflow ${workflowId}.`);
             this.emit('agent_suspended', workflowId, latentState, intent);
+            this.dispatchToWebview('AGENT_SUSPENDED', { workflowId, latentState, intent });
         }
 
         if (event.event_type === 'AgentResumedEvent') {
             this.emit('agent_resumed', event.workflow_id);
+            this.dispatchToWebview('AGENT_RESUMED', { workflowId: event.workflow_id });
         }
     }
 
@@ -126,3 +168,4 @@ export class TelemetryClient extends EventEmitter {
         }, delay);
     }
 }
+

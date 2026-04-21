@@ -2,6 +2,7 @@
   "name": "coreason-vscode",
   "publisher": "coreason",
   "version": "0.0.1",
+  "icon": "assets/coreason_logo.jpeg",
   "engines": {
     "vscode": "^1.107.0"
   },
@@ -23,8 +24,36 @@
       {
         "command": "coreason.resolveOracle",
         "title": "CoReason: Resolve Oracle"
+      },
+      {
+        "command": "coreason.newSwarm",
+        "title": "CoReason: New Topology Manifest"
+      },
+      {
+        "command": "coreason.runSwarm",
+        "title": "CoReason: Run Swarm Manifest",
+        "icon": "$(play)"
+      },
+      {
+        "command": "coreason.synthesizeIntent",
+        "title": "CoReason: Synthesize Agent from Text",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "coreason.refreshSchema",
+        "title": "CoReason: Refresh Active Schema Cache",
+        "icon": "$(refresh)"
       }
     ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "coreason.runSwarm",
+          "group": "navigation",
+          "when": "resourceExtname == .json || resourceExtname == .yaml"
+        }
+      ]
+    },
     "viewsContainers": {
       "activitybar": [
         {

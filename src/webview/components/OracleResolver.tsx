@@ -7,11 +7,57 @@ export const OracleResolver = () => {
     const [status, setStatus] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);
 
+    const [schemaFields, setSchemaFields] = useState<any>(null);
+    const [yieldType, setYieldType] = useState<string>('AgentResponse');
+    const [insightPanels, setInsightPanels] = useState<any[]>([]);
+
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message && message.type === 'SET_ORACLE_WORKFLOW') {
                 setWorkflowId(message.payload);
+            } else if (message && message.type === 'AGENT_SUSPENDED') {
+                setWorkflowId(message.payload.workflowId);
+                const intent = message.payload.intent;
+                if (intent && intent.domain_extensions && intent.domain_extensions.VerificationYield) {
+                    setYieldType('VerificationYield');
+                    setSchemaFields(intent.domain_extensions.VerificationYield);
+                    setResolutionData(JSON.stringify({
+                        success: true,
+                        justification: ""
+                    }, null, 2));
+                    setStatus("VerificationYield boundary identified.");
+                } else {
+                    setYieldType('AgentResponse');
+                    setSchemaFields(null);
+                    setResolutionData('{\n  "decision": "approve"\n}');
+                }
+            } else if (message && message.type === 'MCP_UI_INTENT') {
+                // Handle MCPClientIntent from the telemetry bridge
+                const intent = message.payload;
+                if (intent?.params?.holographic_projection) {
+                    setInsightPanels(intent.params.holographic_projection);
+                }
+                // If intent contains a resolution_schema, dynamically build form fields
+                if (intent?.resolution_schema) {
+                    setSchemaFields(intent.resolution_schema);
+                    setYieldType(intent.intent_type || 'AdjudicationIntent');
+                    // Pre-populate with default values from schema
+                    const defaults: Record<string, any> = {};
+                    for (const [key, spec] of Object.entries(intent.resolution_schema as Record<string, any>)) {
+                        Object.defineProperty(defaults, key, {
+                            value: spec?.default ?? '',
+                            enumerable: true,
+                            configurable: true,
+                            writable: true
+                        });
+                    }
+                    setResolutionData(JSON.stringify(defaults, null, 2));
+                    setStatus(`${intent.intent_type || 'Intent'} received — awaiting human resolution.`);
+                }
+                if (intent?.params?.holographic_projection?.length) {
+                    setWorkflowId(intent.workflow_id || workflowId);
+                }
             }
         };
 
@@ -29,8 +75,18 @@ export const OracleResolver = () => {
         setStatus('Submitting...');
         try {
             const parsedResolution = JSON.parse(resolutionData);
-            vscodeApi.postMessage({ type: 'SUBMIT', payload: { workflowId, correctedIntent: parsedResolution } });
-            setStatus('Success: Resolution submitted to host.');
+            // Emit InterventionReceipt back to extension host
+            vscodeApi.postMessage({
+                type: 'SUBMIT',
+                payload: {
+                    workflowId,
+                    correctedIntent: parsedResolution,
+                    receipt_type: 'InterventionReceipt',
+                    yield_type: yieldType,
+                }
+            });
+            setStatus('Success: InterventionReceipt submitted to host.');
+            setInsightPanels([]);
         } catch (error: any) {
             setStatus(`Error: ${error.message || String(error)}`);
         } finally {
@@ -71,6 +127,33 @@ export const OracleResolver = () => {
                     Epistemic Oracle Resolution
                 </h2>
 
+                {/* Insight Card Panels from MCPClientIntent */}
+                {insightPanels.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {insightPanels.map((panel: any, idx: number) => (
+                            <div key={idx} style={{
+                                padding: '12px',
+                                background: 'var(--vscode-editorWidget-background)',
+                                border: `1px solid ${panel.severity === 'critical' ? 'var(--vscode-errorForeground)' : 'var(--vscode-widget-border)'}`,
+                                borderRadius: '4px',
+                                fontSize: '0.85em',
+                            }}>
+                                <strong>{panel.panel_type === 'InsightCardProfile' ? '🔥 Burn Card' : '📊 Grammar Panel'}</strong>
+                                {panel.markdown_body && (
+                                    <pre style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap', fontFamily: 'var(--vscode-editor-font-family), monospace' }}>
+                                        {panel.markdown_body}
+                                    </pre>
+                                )}
+                                {panel.chart_data && (
+                                    <div style={{ marginTop: '8px', color: 'var(--vscode-descriptionForeground)' }}>
+                                        Loss vectors: {JSON.stringify(panel.chart_data.data_points?.slice(0, 5))}…
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                     <label style={{ fontSize: '0.9em', fontWeight: 'bold' }}>Workflow ID</label>
                     <input
@@ -92,7 +175,19 @@ export const OracleResolver = () => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    <label style={{ fontSize: '0.9em', fontWeight: 'bold' }}>Resolution Payload (JSON)</label>
+                    <label style={{ fontSize: '0.9em', fontWeight: 'bold' }}>
+                        {yieldType === 'VerificationYield' ? 'Verification Yield Payload (JSON)' : 'Resolution Payload (JSON)'}
+                    </label>
+                    {schemaFields && (
+                        <div style={{ padding: '10px', background: 'var(--vscode-editorWidget-background)', border: '1px solid var(--vscode-widget-border)', borderRadius: '2px', marginBottom: '10px', fontSize: '0.85em' }}>
+                            <strong>Dynamically Mapped Expected Schema:</strong>
+                            <ul style={{ margin: '5px 0 0 0', paddingLeft: '20px' }}>
+                                {Object.entries(schemaFields).map(([key, desc]) => (
+                                    <li key={key}><code>{key}</code>: {desc as string}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <textarea
                         value={resolutionData}
                         onChange={(e) => setResolutionData(e.target.value)}
