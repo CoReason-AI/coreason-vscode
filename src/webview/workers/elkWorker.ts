@@ -1,17 +1,40 @@
 import YAML from 'yaml';
 // @ts-ignore
-import ELK from 'elkjs/lib/elk.bundled.js';
+import ELK from 'elkjs/lib/elk-api.js';
+// @ts-ignore
+import ElkInternalWorker from 'elkjs/lib/elk-worker.min.js?worker&inline';
 import { WorkerMessage } from '../../shared/types';
 
-const elk = new ELK();
+let elkInstance: any = null;
 
 self.onmessage = async (event: MessageEvent) => {
     try {
+        if (!elkInstance) {
+            const ElkConstructor = (ELK as any).default || ELK;
+            if (typeof ElkConstructor !== 'function') {
+                throw new Error("ELK constructor is not a function. It resolved to: " + typeof ElkConstructor);
+            }
+            
+            elkInstance = new ElkConstructor({
+                workerFactory: function (url: string) {
+                    return new ElkInternalWorker();
+                }
+            });
+        }
+
         const yamlString = event.data;
         if (!yamlString) return;
 
-        const yamlData = YAML.parse(yamlString);
+        const parsedDoc = YAML.parse(yamlString);
+        console.log("ELK Worker: Parsed full document:", parsedDoc);
+        
+        // Support both a full WorkflowManifest (topology nested under 'topology' key)
+        // and a flat topology-only document for backward compatibility.
+        const yamlData = parsedDoc?.topology ?? parsedDoc;
+        console.log("ELK Worker: Extracted topology target:", yamlData);
+
         if (!yamlData || !yamlData.nodes) {
+            console.log("ELK Worker: yamlData.nodes is empty or undefined. Aborting layout.");
             return;
         }
 
@@ -45,7 +68,7 @@ self.onmessage = async (event: MessageEvent) => {
             edges: edges,
         };
 
-        const layoutedGraph = await elk.layout(graph);
+        const layoutedGraph = await elkInstance.layout(graph);
 
         const reactFlowNodes = (layoutedGraph.children || []).map((node: any) => ({
             id: node.id,
@@ -68,6 +91,8 @@ self.onmessage = async (event: MessageEvent) => {
 
         self.postMessage(message);
     } catch (error: any) {
+        // Now if ELK errors *during* layout, it will be safely caught and
+        // the canvas will display the ELK layout error instead of freezing.
         const errorMessage: WorkerMessage = { type: 'ERROR', message: error.message || 'Unknown error' };
         self.postMessage(errorMessage);
     }
