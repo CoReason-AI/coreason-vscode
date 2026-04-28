@@ -16,24 +16,32 @@ concurrency:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, hetzner, x64]
+    env:
+      TEMPORAL_CI_NAMESPACE: ci-${{ github.repository_id }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}-${{ strategy.job-index }}
+      CI_RUN_ID: ${{ github.run_id }}
+      NPM_CONFIG_CACHE: ${{ github.workspace }}/.npm_cache
     steps:
-      - uses: actions/checkout@v6
-      - name: Use Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: 'npm'
+      - name: Pre-Flight Workspace Purity
+        run: sudo chown -R $(whoami):$(whoami) ${{ github.workspace }} || true
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+      - name: Substrate Purity Verification
+        run: git clean -xfd -e .npm_cache
+        shell: bash
       - name: Install dependencies
         run: npm ci
+        shell: bash
+      - name: Provision Temporal Namespace
+        run: temporal operator namespace create $TEMPORAL_CI_NAMESPACE --address 127.0.0.1:7233 || true
         shell: bash
       - name: Typecheck
         run: npx tsc --noEmit
         shell: bash
-      - name: Build Webview
-        run: npx vite build
+      - name: Build Validation
+        run: npm run build
         shell: bash
-      - name: Pillar 1 & 2 - Pure Logic & React Components (Vitest)
+      - name: Frontend Validation Suite
         run: npm run test
         shell: bash
       - name: Upload Coverage to Codecov
@@ -44,3 +52,12 @@ jobs:
           flags: unittests
           name: codecov-coreason-vscode
           fail_ci_if_error: false
+      - name: Extension UI Suite (Headless)
+        run: xvfb-run -a npm run test:e2e
+        shell: bash
+      - name: Container & Network Teardown (Always Execute)
+        if: always()
+        run: |
+          temporal operator namespace delete $TEMPORAL_CI_NAMESPACE --address 127.0.0.1:7233 --yes || true
+          sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}
+        shell: bash
