@@ -25,4 +25,4 @@ Expected event types:
 - `NodeErrorEvent`
 
 ## The AST Mutation Protocol
-Bi-directional YAML Lens mutations (e.g., adding an edge) must be performed via `vscode.WorkspaceEdit().insert()` or `replace()`, appending new connections rather than string-replacing the entire AST. Visual edges map to `actionSpaceId` arrays in the AST.
+Bi-directional YAML Lens mutations (e.g., adding an edge) must be performed via `vscode.WorkspaceEdit().insert()` or `replace()`, appending new connections rather than string-replacing the entire AST. Visual edges map to `actionSpaceCId` arrays in the AST.
